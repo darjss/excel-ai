@@ -68,7 +68,7 @@ describe("getSubscription", () => {
       userId: "user-1",
       planSlug: "pro",
       status: "active",
-      polarSubscriptionId: "sub_1",
+      providerSubscriptionId: "sub_1",
       currentPeriodEnd: new Date("2026-08-01T00:00:00.000Z"),
     });
   });
@@ -93,7 +93,7 @@ describe("getSubscription", () => {
       userId: "user-9",
       planSlug: "pro",
       status: "active",
-      polarSubscriptionId: null,
+      providerSubscriptionId: null,
       currentPeriodEnd: null,
     });
   });
@@ -113,7 +113,7 @@ describe("hasActiveSubscription", () => {
         userId: "u",
         planSlug: "standard",
         status: "canceled",
-        polarSubscriptionId: null,
+        providerSubscriptionId: null,
         currentPeriodEnd: null,
       }),
     ).toBe(false);
@@ -122,23 +122,27 @@ describe("hasActiveSubscription", () => {
         userId: "u",
         planSlug: "standard",
         status: "active",
-        polarSubscriptionId: null,
+        providerSubscriptionId: null,
         currentPeriodEnd: null,
       }),
     ).toBe(true);
   });
 });
 
+const snapshot = (over: Partial<SubscriptionSnapshot> = {}): SubscriptionSnapshot => ({
+  userId: "user-1",
+  planSlug: "pro",
+  status: "active",
+  providerSubscriptionId: "sub_1",
+  currentPeriodEnd: new Date("2026-09-01T00:00:00.000Z"),
+  ...over,
+});
+
 describe("upsertSubscription", () => {
-  it("writes the normalized snapshot", async () => {
-    const snapshot: SubscriptionSnapshot = {
-      userId: "user-1",
-      planSlug: "standard",
-      status: "past_due",
-      polarSubscriptionId: "sub_2",
-      currentPeriodEnd: new Date("2026-09-01T00:00:00.000Z"),
-    };
-    await upsertSubscription(snapshot);
+  it("writes the normalized snapshot to the polar column", async () => {
+    const outcome = await upsertSubscription(
+      snapshot({ planSlug: "standard", status: "past_due", providerSubscriptionId: "sub_2" }),
+    );
     expect(dbState.upserted?.values).toMatchObject({
       userId: "user-1",
       planSlug: "standard",
@@ -146,5 +150,62 @@ describe("upsertSubscription", () => {
       polarSubscriptionId: "sub_2",
     });
     expect(dbState.upserted?.set).toMatchObject({ planSlug: "standard", status: "past_due" });
+    expect(outcome).toEqual({
+      kind: "applied",
+      userId: "user-1",
+      previousTier: "standard",
+      nextTier: "standard",
+      supersededSubscriptionId: null,
+    });
+  });
+
+  it("reports the effective tier change when inserting a first active subscription", async () => {
+    const outcome = await upsertSubscription(snapshot());
+    expect(outcome).toEqual({
+      kind: "applied",
+      userId: "user-1",
+      previousTier: "standard",
+      nextTier: "pro",
+      supersededSubscriptionId: null,
+    });
+  });
+
+  it("applies an updated event for the current subscription id", async () => {
+    dbState.rows = [row({ planSlug: "pro", status: "active", polarSubscriptionId: "sub_1" })];
+    const outcome = await upsertSubscription(
+      snapshot({ planSlug: "pro", status: "past_due", providerSubscriptionId: "sub_1" }),
+    );
+    expect(dbState.upserted?.set).toMatchObject({ status: "past_due" });
+    expect(outcome).toEqual({
+      kind: "applied",
+      userId: "user-1",
+      previousTier: "pro",
+      nextTier: "standard",
+      supersededSubscriptionId: null,
+    });
+  });
+
+  it("ignores a canceled event for a non-current subscription id", async () => {
+    dbState.rows = [row({ planSlug: "pro", status: "active", polarSubscriptionId: "sub_new" })];
+    const outcome = await upsertSubscription(
+      snapshot({ status: "canceled", providerSubscriptionId: "sub_old" }),
+    );
+    expect(outcome).toEqual({ kind: "ignored" });
+    expect(dbState.upserted).toBeNull();
+  });
+
+  it("replaces the row and supersedes the old id when an active event arrives for a new id", async () => {
+    dbState.rows = [row({ planSlug: "standard", status: "active", polarSubscriptionId: "sub_old" })];
+    const outcome = await upsertSubscription(
+      snapshot({ planSlug: "pro", status: "active", providerSubscriptionId: "sub_new" }),
+    );
+    expect(dbState.upserted?.set).toMatchObject({ planSlug: "pro", polarSubscriptionId: "sub_new" });
+    expect(outcome).toEqual({
+      kind: "applied",
+      userId: "user-1",
+      previousTier: "standard",
+      nextTier: "pro",
+      supersededSubscriptionId: "sub_old",
+    });
   });
 });

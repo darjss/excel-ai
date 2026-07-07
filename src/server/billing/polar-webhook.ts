@@ -35,7 +35,7 @@ export const subscriptionSnapshotFromPolar = (
     userId,
     planSlug,
     status: statusOverride ?? mapStatus(data.status),
-    polarSubscriptionId: data.id,
+    providerSubscriptionId: data.id,
     currentPeriodEnd: data.currentPeriodEnd ? new Date(data.currentPeriodEnd) : null,
   };
 };

@@ -3,13 +3,13 @@ import { Polar } from "@polar-sh/sdk";
 import { env } from "@/env";
 import { isPlanSlug } from "@/lib/plans";
 import { NotFoundError } from "@/server/api/errors";
+import { handleSubscriptionEvent } from "./lifecycle";
 import {
   type PolarSubscriptionPayload,
   type ProductPlanMap,
   subscriptionSnapshotFromPolar,
 } from "./polar-webhook";
 import type { PaymentProvider, SubscriptionStatus } from "./provider";
-import { upsertSubscription } from "./subscription";
 
 const client = new Polar({
   accessToken: env.POLAR_ACCESS_TOKEN,
@@ -35,7 +35,7 @@ const applySubscriptionEvent = async (
   statusOverride?: SubscriptionStatus,
 ): Promise<void> => {
   const snapshot = subscriptionSnapshotFromPolar(data, productIdBySlug, statusOverride);
-  if (snapshot) await upsertSubscription(snapshot);
+  if (snapshot) await handleSubscriptionEvent(snapshot, polarProvider);
 };
 
 export const polarProvider: PaymentProvider = {
@@ -48,6 +48,10 @@ export const polarProvider: PaymentProvider = {
       successUrl,
     });
     return { url: session.url };
+  },
+
+  cancelSubscription: async (subscriptionId) => {
+    await client.subscriptions.revoke({ id: subscriptionId });
   },
 
   authPlugin: polar({

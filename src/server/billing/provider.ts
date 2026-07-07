@@ -3,7 +3,6 @@ import type { PlanSlug } from "@/lib/plans";
 
 export interface CheckoutInput {
   userId: string;
-  userEmail: string;
   planSlug: string;
   successUrl: string;
 }
@@ -14,12 +13,13 @@ export interface SubscriptionSnapshot {
   userId: string;
   planSlug: PlanSlug;
   status: SubscriptionStatus;
-  polarSubscriptionId: string | null;
+  providerSubscriptionId: string | null;
   currentPeriodEnd: Date | null;
 }
 
 export interface PaymentProvider {
   name: string;
   createCheckout: (input: CheckoutInput) => Promise<{ url: string }>;
+  cancelSubscription: (subscriptionId: string) => Promise<void>;
   authPlugin: BetterAuthPlugin;
 }

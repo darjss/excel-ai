@@ -24,11 +24,16 @@ export const loadPublishedPortal = async (slug: string): Promise<PublishedPortal
 export const publishPortalConfig = async (
   slug: string,
   config: PortalConfig,
-  tier: PlanSlug = "standard",
+  tier: PlanSlug,
 ): Promise<SetPortalConfigResult> => {
   const agent = await supplierAgent(slug);
   const result = await agent.setPortalConfig(config);
   if (!result.ok) return result;
   await agent.publish(tier);
   return { ok: true };
+};
+
+export const restampPublishedTier = async (slug: string, tier: PlanSlug): Promise<void> => {
+  const agent = await supplierAgent(slug);
+  await agent.updatePublishedTier(tier);
 };

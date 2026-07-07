@@ -93,6 +93,12 @@ export class SupplierAgent extends Agent<Cloudflare.Env, PortalState> {
     return true;
   }
 
+  updatePublishedTier(tier: PlanSlug): boolean {
+    if (!this.state.published) return false;
+    this.setState({ ...this.state, publishedTier: tier });
+    return true;
+  }
+
   getPortalConfig(): PortalConfig | null {
     return this.state.published ? this.state.config : null;
   }

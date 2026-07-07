@@ -19,7 +19,7 @@ describe("subscriptionSnapshotFromPolar", () => {
       userId: "user-1",
       planSlug: "pro",
       status: "active",
-      polarSubscriptionId: "sub_1",
+      providerSubscriptionId: "sub_1",
       currentPeriodEnd: new Date("2026-08-01T00:00:00.000Z"),
     });
   });

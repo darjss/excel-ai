@@ -67,7 +67,7 @@ export const portalRoute = new Elysia()
       const seeded: string[] = [];
       const buyerLinks: { slug: string; token: string }[] = [];
       for (const [slug, config] of Object.entries(portalConfigFixtures)) {
-        const result = await publishPortalConfig(slug, config);
+        const result = await publishPortalConfig(slug, config, "standard");
         if (!result.ok) {
           throw new ConflictError(`Fixture ${slug} failed validation: ${result.error.message}`);
         }

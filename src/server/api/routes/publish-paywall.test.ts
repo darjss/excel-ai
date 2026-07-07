@@ -64,7 +64,7 @@ const activeSub = (planSlug: "standard" | "pro"): Subscription => ({
   userId: "user-a",
   planSlug,
   status: "active",
-  polarSubscriptionId: "sub_1",
+  providerSubscriptionId: "sub_1",
   currentPeriodEnd: null,
 });
 

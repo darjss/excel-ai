@@ -54,4 +54,18 @@ describe("SupplierAgent tier stamping", () => {
     const { agent } = harness({ config, published: true, publishedTier: null });
     expect(agent.getPublished()).toEqual({ config, tier: "standard" });
   });
+
+  it("restamps the tier of a published portal", () => {
+    const { agent, snapshot } = harness({ config, published: true, publishedTier: "standard" });
+    expect(agent.updatePublishedTier("pro")).toBe(true);
+    expect(snapshot().publishedTier).toBe("pro");
+    expect(agent.getPublished()).toEqual({ config, tier: "pro" });
+  });
+
+  it("no-ops updatePublishedTier when the portal is unpublished", () => {
+    const { agent, snapshot } = harness({ config, published: false, publishedTier: null });
+    expect(agent.updatePublishedTier("pro")).toBe(false);
+    expect(snapshot().publishedTier).toBeNull();
+    expect(snapshot().published).toBe(false);
+  });
 });

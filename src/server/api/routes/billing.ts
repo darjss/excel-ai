@@ -33,7 +33,6 @@ export const billingRoute = new Elysia({ prefix: "/billing" })
     ({ user, body }) =>
       paymentProvider.createCheckout({
         userId: user.id,
-        userEmail: user.email,
         planSlug: body.planSlug,
         successUrl: safeSuccessUrl(body.successPath),
       }),
