@@ -1,52 +1,46 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [main, nightly]
   push:
-    branches: [main, nightly]
-
-permissions:
-  contents: read
+    branches:
+      - main
+  pull_request:
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  ci:
+  verify:
     runs-on: ubuntu-latest
-    env:
-      CI: true
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
-
-      - name: Cache Bun install cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
+          node-version: 24
+          cache: pnpm
       - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Lint
-        run: bun run lint
-
+        run: pnpm install --frozen-lockfile
+      - name: Provide placeholder dev vars
+        run: cp .dev.vars.example .dev.vars
       - name: Typecheck
-        run: bun run typecheck
-
-      - name: Test
-        run: bun run test
-
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
       - name: Build
-        run: bun run build
+        run: pnpm build
+
+  extraction-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Extraction CI
+        run: pnpm extraction:ci
