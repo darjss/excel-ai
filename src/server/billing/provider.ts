@@ -1,21 +1,25 @@
 import type { BetterAuthPlugin } from "better-auth";
+import type { PlanSlug } from "@/lib/plans";
 
 export interface CheckoutInput {
   userId: string;
-  userEmail: string;
   planSlug: string;
   successUrl: string;
 }
 
-export interface CustomerState {
-  activePlanSlug: string | null;
-  subscriptionStatus: "active" | "canceled" | "none";
-  portalConfigured: boolean;
+export type SubscriptionStatus = "active" | "canceled" | "past_due";
+
+export interface SubscriptionSnapshot {
+  userId: string;
+  planSlug: PlanSlug;
+  status: SubscriptionStatus;
+  providerSubscriptionId: string | null;
+  currentPeriodEnd: Date | null;
 }
 
 export interface PaymentProvider {
   name: string;
   createCheckout: (input: CheckoutInput) => Promise<{ url: string }>;
-  getCustomerState: (userId: string) => Promise<CustomerState>;
+  cancelSubscription: (subscriptionId: string) => Promise<void>;
   authPlugin: BetterAuthPlugin;
 }

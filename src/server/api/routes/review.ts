@@ -2,16 +2,24 @@ import { getAgentByName } from "agents";
 import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
+import { plans } from "@/lib/plans";
 import { deriveEffectiveConfig } from "@/review/effective-config";
 import { isValidSlug } from "@/review/slug";
 import { summarizeFindings } from "@/review/summary";
 import type { ExtractionAgent, ExtractionState } from "@/server/agents/extraction";
+import { getSubscription, hasActiveSubscription } from "@/server/billing/subscription";
 import { db } from "@/server/db";
 import { portalDraft } from "@/server/db/schema";
 import { canClaim, readyConfig } from "@/server/extraction/claim";
 import { purgePortalCache, portalUrlFor } from "@/server/portal/cache";
 import { publishPortalConfig } from "@/server/portal/store";
-import { AppError, ConflictError, ForbiddenError, NotFoundError } from "../errors";
+import {
+  AppError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  PaymentRequiredError,
+} from "../errors";
 import { authPlugin } from "../plugins/auth";
 
 const getAgent = (jobId: string) =>
@@ -162,6 +170,18 @@ export const reviewRoute = new Elysia({ prefix: "/review" })
         });
       }
 
+      const subscription = await getSubscription(user.id);
+      if (!hasActiveSubscription(subscription)) {
+        throw new PaymentRequiredError("Publishing requires a paid plan.", {
+          checkoutPath: "/api/billing/checkout",
+          plans: plans.map((plan) => ({
+            slug: plan.slug,
+            name: plan.name,
+            priceMonthly: plan.priceMonthly,
+          })),
+        });
+      }
+
       const effective = deriveEffectiveConfig(config);
 
       const ownerScope = and(
@@ -178,7 +198,7 @@ export const reviewRoute = new Elysia({ prefix: "/review" })
 
       let published: Awaited<ReturnType<typeof publishPortalConfig>>;
       try {
-        published = await publishPortalConfig(slug, effective);
+        published = await publishPortalConfig(slug, effective, subscription.planSlug);
       } catch (error) {
         await releaseSlug();
         throw error;

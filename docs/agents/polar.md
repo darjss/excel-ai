@@ -21,11 +21,12 @@ Other clients: `npx mcp-remote https://mcp.polar.sh/mcp/polar-sandbox`.
 
 1. Connect to the sandbox MCP server and complete the OAuth login against a sandbox organization (create one at https://sandbox.polar.sh if needed).
 2. List the MCP tools and find the product-creation tool (tools mirror the Polar API; look for `products` create/list).
-3. For each paid plan in `src/lib/plans.ts` (currently only `pro`, $20/mo), create a product:
+3. For each paid plan in `src/lib/plans.ts` (`standard` $29/mo and `pro` $49/mo), create a product:
    - name: the plan name
    - recurring interval: `month`
-   - one fixed price: amount in cents (`2000`), currency `usd`
-4. Note the returned product id.
+   - one fixed price: amount in cents (`2900` for Standard, `4900` for Pro), currency `usd`
+   - flat pricing: unlimited Buyers/Orders, no per-user or per-order fees
+4. Note the returned product ids.
 5. Create an organization access token in the sandbox dashboard (Settings → Developers).
 6. Create a webhook endpoint in the dashboard pointing at `https://<your-host>/api/auth/polar/webhooks`, format `raw`, and note the secret.
 
@@ -37,8 +38,24 @@ Local (`.dev.vars`) and deployed (`wrangler secret put`):
 POLAR_ACCESS_TOKEN=<org access token>
 POLAR_WEBHOOK_SECRET=<webhook secret>
 POLAR_SERVER=sandbox
-POLAR_PRODUCT_ID_PRO=<product id from step 4>
+POLAR_PRODUCT_ID_STANDARD=<standard product id from step 4>
+POLAR_PRODUCT_ID_PRO=<pro product id from step 4>
 ```
+
+The webhook handler (`src/server/billing/polar.ts`) translates Polar subscription
+events into the provider-agnostic `SubscriptionSnapshot` and upserts the
+`supplier_subscription` row read by `getSubscription` — the one gate the publish
+paywall and billing page call.
+
+### Local dev without real Polar products
+
+`createCustomerOnSignUp` is gated on a real-looking `POLAR_ACCESS_TOKEN` (anything
+not containing `placeholder`), so sign-up keeps working with the placeholder token
+in `.dev.vars.example`. To exercise the publish paywall locally without Polar,
+set `BILLING_DEV_BYPASS=true` (and optionally `BILLING_DEV_BYPASS_PLAN=pro`) — it
+simulates an active subscription for every user. It defaults to `false` and is
+meant only for local flows (`pnpm review:ci` and `pnpm billing:ci` rely on it for
+the publish success path). Verify the paywall itself with the default `false`.
 
 ### Verify, then production
 

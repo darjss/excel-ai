@@ -20,6 +20,23 @@ export const portalDraft = sqliteTable(
   (table) => [index("portal_draft_user_idx").on(table.userId)],
 );
 
+export const supplierSubscription = sqliteTable(
+  "supplier_subscription",
+  {
+    id: id(),
+    userId: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    planSlug: text("plan_slug").notNull(),
+    status: text("status").notNull(),
+    polarSubscriptionId: text("polar_subscription_id"),
+    currentPeriodEnd: integer("current_period_end", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+);
+
 export const project = sqliteTable(
   "project",
   {

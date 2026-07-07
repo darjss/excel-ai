@@ -1,12 +1,14 @@
-import type { PortalConfig } from "@/portal-config";
 import { env } from "@/env";
+import { entitlementsFor } from "@/lib/plans";
+import type { PortalConfig } from "@/portal-config";
 import { resolvePortalTarget } from "./resolve";
-import { loadPublishedConfig } from "./store";
+import { loadPublishedPortal } from "./store";
 
 export interface PortalPageData {
   config: PortalConfig;
   basePath: string;
   slug: string;
+  badgeHidden: boolean;
 }
 
 export const loadPortalPage = async (
@@ -20,8 +22,13 @@ export const loadPortalPage = async (
   );
   if (!target) return null;
 
-  const config = await loadPublishedConfig(target.slug);
-  if (!config) return null;
+  const published = await loadPublishedPortal(target.slug);
+  if (!published) return null;
 
-  return { config, basePath: target.basePath, slug: target.slug };
+  return {
+    config: published.config,
+    basePath: target.basePath,
+    slug: target.slug,
+    badgeHidden: entitlementsFor(published.tier).badgeRemoved,
+  };
 };
