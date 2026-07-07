@@ -1,9 +1,11 @@
 import { Agent } from "agents";
 import { env } from "cloudflare:workers";
+import type { PortalConfig } from "@/portal-config";
 import { runExtraction } from "@/extraction/agent/extract";
 import { createChatFn, gatewayFromEnv } from "@/extraction/agent/models";
 import { type ProgressEvent, progress } from "@/extraction/job/events";
 import type { BuilderHints, ExtractionOutcome } from "@/extraction/ladder/types";
+import { applyReviewAction, hasFinding, type ReviewAction } from "@/review/mutations";
 
 export type ExtractionStatus =
   | "idle"
@@ -18,13 +20,23 @@ export interface ExtractionState {
   events: ProgressEvent[];
   outcome: ExtractionOutcome | null;
   r2Key: string | null;
+  published: boolean;
+  slug: string | null;
+  answeredFindingIds: string[];
 }
+
+export type ReviewResult =
+  | { ok: true; config: PortalConfig }
+  | { ok: false; reason: "not_ready" | "unknown_finding" };
 
 const INITIAL_STATE: ExtractionState = {
   status: "idle",
   events: [],
   outcome: null,
   r2Key: null,
+  published: false,
+  slug: null,
+  answeredFindingIds: [],
 };
 
 const TERMINAL: ReadonlySet<ExtractionStatus> = new Set([
@@ -59,6 +71,42 @@ export class ExtractionAgent extends Agent<Cloudflare.Env, ExtractionState> {
       events: [progress("queued", "Rebuilding with your guidance")],
     });
     this.ctx.waitUntil(this.run(r2Key, hints));
+  }
+
+  seed(config: PortalConfig): void {
+    this.setState({
+      ...INITIAL_STATE,
+      status: "ready",
+      outcome: { kind: "ready", config, report: { anomalies: [], downgrades: [] }, iterations: 0 },
+      events: [progress("done", "Seeded draft ready to review")],
+    });
+  }
+
+  applyReview(action: ReviewAction): ReviewResult {
+    const outcome = this.state.outcome;
+    if (outcome?.kind !== "ready") {
+      return { ok: false, reason: "not_ready" };
+    }
+    if (action.type === "finding-decision" && !hasFinding(outcome.config, action.findingId)) {
+      return { ok: false, reason: "unknown_finding" };
+    }
+    const config = applyReviewAction(outcome.config, action);
+    const answeredFindingIds =
+      action.type === "finding-decision"
+        ? [...new Set([...this.state.answeredFindingIds, action.findingId])]
+        : this.state.answeredFindingIds;
+    this.setState({
+      ...this.state,
+      outcome: { ...outcome, config },
+      published: false,
+      answeredFindingIds,
+    });
+    return { ok: true, config };
+  }
+
+  markPublished(slug: string): void {
+    if (this.state.outcome?.kind !== "ready") return;
+    this.setState({ ...this.state, published: true, slug });
   }
 
   snapshot(): ExtractionState {

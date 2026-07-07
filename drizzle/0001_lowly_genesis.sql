@@ -1,12 +1,17 @@
-CREATE TABLE `white_glove_request` (
+CREATE TABLE `portal_draft` (
 	`id` text PRIMARY KEY NOT NULL,
-	`email` text NOT NULL,
 	`job_id` text NOT NULL,
-	`reason` text NOT NULL,
-	`created_at` integer NOT NULL
+	`user_id` text NOT NULL,
+	`slug` text,
+	`published_at` integer,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `white_glove_job_idx` ON `white_glove_request` (`job_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `portal_draft_job_id_unique` ON `portal_draft` (`job_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `portal_draft_slug_unique` ON `portal_draft` (`slug`);--> statement-breakpoint
+CREATE INDEX `portal_draft_user_idx` ON `portal_draft` (`user_id`);--> statement-breakpoint
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
 CREATE TABLE `__new_sso_provider` (
 	`id` text PRIMARY KEY NOT NULL,

@@ -12,8 +12,15 @@
     {
       "idx": 1,
       "version": "6",
-      "when": 1783420004628,
-      "tag": "0001_tricky_alex_power",
+      "when": 1783415783180,
+      "tag": "0001_lowly_genesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783422432748,
+      "tag": "0002_white_glove_request",
       "breakpoints": true
     }
   ]

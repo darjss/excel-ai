@@ -16,13 +16,18 @@
 import { createId } from "@paralleldrive/cuid2";
 import { getAgentByName } from "agents";
 import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
+import { env as appEnv } from "@/env";
 import { outcomeToFrame } from "@/extraction/job/outcome";
+import { parsePortalConfig } from "@/portal-config";
 import type { ExtractionAgent, ExtractionState } from "@/server/agents/extraction";
 import { db } from "@/server/db";
-import { whiteGloveRequest } from "@/server/db/schema";
+import { portalDraft, whiteGloveRequest } from "@/server/db/schema";
+import { isClaimBlocked } from "@/server/extraction/claim";
 import { submitWhiteGlove, type WhiteGloveStore } from "@/server/extraction/white-glove";
-import { AppError } from "../errors";
+import { AppError, ForbiddenError, NotFoundError } from "../errors";
+import { authPlugin } from "../plugins/auth";
 import { consumeExtractionToken } from "../rate-limit";
 
 const SSE_HEADERS = {
@@ -61,6 +66,16 @@ const hintsSchema = t.Object({
   }),
 });
 
+const assertNotClaimedByOther = async (jobId: string, userId: string | undefined): Promise<void> => {
+  const [claim] = await db
+    .select({ userId: portalDraft.userId })
+    .from(portalDraft)
+    .where(eq(portalDraft.jobId, jobId));
+  if (isClaimBlocked(claim, userId)) {
+    throw new ForbiddenError("This draft has been claimed by its owner.");
+  }
+};
+
 const store: WhiteGloveStore = {
   insert: async (row) => {
     await db.insert(whiteGloveRequest).values(row);
@@ -68,6 +83,7 @@ const store: WhiteGloveStore = {
 };
 
 export const extractionRoute = new Elysia({ prefix: "/extraction" })
+  .use(authPlugin)
   .post(
     "/",
     async ({ request, status }) => {
@@ -110,7 +126,8 @@ export const extractionRoute = new Elysia({ prefix: "/extraction" })
   )
   .post(
     "/:id/refine",
-    async ({ params, body, status }) => {
+    async ({ params, body, status, user }) => {
+      await assertNotClaimedByOther(params.id, user?.id);
       const agent = await getAgent(params.id);
       const snapshot: ExtractionState = await agent.snapshot();
       if (snapshot.status !== "builder-mode") {
@@ -145,7 +162,8 @@ export const extractionRoute = new Elysia({ prefix: "/extraction" })
       response: { 201: t.Object({ ok: t.Boolean() }) },
     },
   )
-  .get("/:id/events", async ({ params }) => {
+  .get("/:id/events", async ({ params, user }) => {
+    await assertNotClaimedByOther(params.id, user?.id);
     const agent = await getAgent(params.id);
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
@@ -176,4 +194,23 @@ export const extractionRoute = new Elysia({ prefix: "/extraction" })
       },
     });
     return new Response(stream, { headers: SSE_HEADERS });
-  });
+  })
+  .post(
+    "/:id/seed",
+    async ({ params, body, status }) => {
+      if (appEnv.EXTRACTION_SEED_ENABLED !== "true") {
+        throw new NotFoundError("Extraction seed endpoint is disabled.");
+      }
+      const parsed = parsePortalConfig(body);
+      if (!parsed.ok) {
+        throw new AppError("validation", parsed.error.message, parsed.error.details);
+      }
+      const agent = await getAgent(params.id);
+      await agent.seed(parsed.data);
+      return status(202, { jobId: params.id });
+    },
+    {
+      body: t.Unknown(),
+      response: { 202: t.Object({ jobId: t.String() }) },
+    },
+  );

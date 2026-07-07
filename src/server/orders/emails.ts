@@ -53,6 +53,29 @@ export const supplierNotificationEmail = (order: Order, business: Business): Ema
   ].join("\n"),
 });
 
+const statusLine: Record<"confirmed" | "cancelled", (business: Business) => string> = {
+  confirmed: (business) => `${business.name} has confirmed your order.`,
+  cancelled: (business) => `${business.name} has cancelled your order.`,
+};
+
+export const statusChangeEmail = (
+  order: Order,
+  business: Business,
+  status: "confirmed" | "cancelled",
+): EmailContent => ({
+  subject: `Order ${order.id} ${status} — ${business.name}`,
+  text: [
+    `Hi ${order.buyer.name},`,
+    ``,
+    statusLine[status](business),
+    ``,
+    `Order ${order.id}`,
+    lineText(order),
+    ``,
+    totalsText(order),
+  ].join("\n"),
+});
+
 const looksLikeEmail = (value: string): boolean => /.+@.+\..+/.test(value);
 
 const safeSend = async (message: EmailMessage): Promise<void> => {
@@ -73,4 +96,13 @@ export const sendOrderEmails = async (order: Order, business: Business): Promise
     tasks.push(safeSend({ to: supplierEmail, ...supplierNotificationEmail(order, business) }));
   }
   await Promise.all(tasks);
+};
+
+export const sendStatusChangeEmail = async (
+  order: Order,
+  business: Business,
+  status: "confirmed" | "cancelled",
+): Promise<void> => {
+  if (!looksLikeEmail(order.buyer.contact)) return;
+  await safeSend({ to: order.buyer.contact, ...statusChangeEmail(order, business, status) });
 };

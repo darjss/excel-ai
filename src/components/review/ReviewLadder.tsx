@@ -1,36 +1,32 @@
-import { Match, Switch } from "solid-js";
-import { createExtractionStream } from "@/lib/extraction-stream";
-import type { ReviewOutcome } from "@/lib/extraction-stream";
+import { type JSX, Match, Switch } from "solid-js";
+import { createExtractionStream, type ReviewOutcome } from "@/lib/extraction-stream";
 import { BuilderMode } from "./BuilderMode";
 import { NeedsHuman } from "./NeedsHuman";
+import { ReviewPreview } from "./ReviewPreview";
 import { ReviewProgress } from "./ReviewProgress";
 import { WrongSpecies } from "./WrongSpecies";
 
-const asReady = (outcome: ReviewOutcome | null) => (outcome?.kind === "ready" ? outcome : null);
-const asWrong = (outcome: ReviewOutcome | null) =>
-  outcome?.kind === "wrong-species" ? outcome : null;
-const asBuilder = (outcome: ReviewOutcome | null) =>
-  outcome?.kind === "builder-mode" ? outcome : null;
-const asHuman = (outcome: ReviewOutcome | null) =>
-  outcome?.kind === "needs-human" ? outcome : null;
+const assertUnreachable = (value: never): never => {
+  throw new Error(`Unhandled extraction outcome: ${JSON.stringify(value)}`);
+};
 
-const ReadyDraft = (props: { businessName: string }) => (
-  <div class="mx-auto max-w-xl py-24 text-center">
-    <h1 class="text-3xl font-semibold tracking-tight">Your portal draft is ready</h1>
-    <p class="text-muted-foreground mt-4 text-lg">
-      We built a draft portal for {props.businessName}. The Review Screen picks up from here.
-    </p>
-  </div>
-);
+const renderOutcome = (outcome: ReviewOutcome, jobId: string): JSX.Element => {
+  switch (outcome.kind) {
+    case "ready":
+      return <ReviewPreview jobId={jobId} />;
+    case "wrong-species":
+      return <WrongSpecies message={outcome.message} />;
+    case "builder-mode":
+      return <BuilderMode jobId={jobId} message={outcome.message} preview={outcome.preview} />;
+    case "needs-human":
+      return <NeedsHuman jobId={jobId} reason={outcome.reason} message={outcome.message} />;
+    default:
+      return assertUnreachable(outcome);
+  }
+};
 
 export const ReviewLadder = (props: { jobId: string }) => {
   const snapshot = createExtractionStream(() => props.jobId);
-  const outcome = () => snapshot().outcome;
-
-  const ready = () => asReady(outcome());
-  const wrong = () => asWrong(outcome());
-  const builder = () => asBuilder(outcome());
-  const human = () => asHuman(outcome());
 
   return (
     <main class="px-6">
@@ -42,18 +38,7 @@ export const ReviewLadder = (props: { jobId: string }) => {
             message={snapshot().error ?? "We lost track of this job. Send your file to us and we'll take a look."}
           />
         </Match>
-        <Match when={ready()}>{(value) => <ReadyDraft businessName={value().config.business.name} />}</Match>
-        <Match when={wrong()}>{(value) => <WrongSpecies message={value().message} />}</Match>
-        <Match when={builder()}>
-          {(value) => (
-            <BuilderMode jobId={props.jobId} message={value().message} preview={value().preview} />
-          )}
-        </Match>
-        <Match when={human()}>
-          {(value) => (
-            <NeedsHuman jobId={props.jobId} reason={value().reason} message={value().message} />
-          )}
-        </Match>
+        <Match when={snapshot().outcome}>{(outcome) => renderOutcome(outcome(), props.jobId)}</Match>
       </Switch>
     </main>
   );
