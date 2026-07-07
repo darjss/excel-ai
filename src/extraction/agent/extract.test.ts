@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { wholesaleConfig } from "@/portal-config";
+import { buildDefaultStyle } from "../style";
 import { runExtraction } from "./extract";
 import type { ChatFn, ChatResult } from "./models";
 
@@ -22,6 +23,23 @@ const draftReply = (draft: unknown): ChatResult => ({
 });
 
 const proposingChat = (draft: unknown): ChatFn => async () => draftReply(draft);
+
+const stylePickJson = (sections: string[]): string =>
+  JSON.stringify({
+    paletteKey: "wholesale-navy",
+    radius: "md",
+    fontPairing: "inter-inter",
+    copy: { heroLine: "Order ahead.", about: "A wholesale supplier.", orderCtaLabel: "Order now" },
+    sections,
+  });
+
+const proposingWithStyle = (draft: unknown, sections: string[]): ChatFn => async (request) => {
+  const system = request.messages.find((message) => message.role === "system")?.content ?? "";
+  if (system.includes("brand designer")) {
+    return { content: stylePickJson(sections), finishReason: "stop", toolCalls: [] };
+  }
+  return draftReply(draft);
+};
 
 describe("runExtraction pipeline (mocked model)", () => {
   it("returns a valid PortalConfig when the model proposes a clean draft", async () => {
@@ -52,6 +70,25 @@ describe("runExtraction pipeline (mocked model)", () => {
     expect(taxFinding?.confidence).toBe("low");
     expect(taxFinding?.question).toBeDefined();
     expect(outcome.report.downgrades.some((downgrade) => downgrade.ruleId === "sales-tax")).toBe(true);
+  });
+
+  it("falls back to the default style when the style pick omits a core section", async () => {
+    const outcome = await runExtraction(WORKBOOK, {
+      chat: proposingWithStyle(wholesaleConfig, ["about"]),
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.config.style).toEqual(buildDefaultStyle(outcome.config));
+  });
+
+  it("applies the style pick as-is when it includes all core sections plus extras", async () => {
+    const sections = ["hero", "catalog", "order-form", "about", "contact"];
+    const outcome = await runExtraction(WORKBOOK, {
+      chat: proposingWithStyle(wholesaleConfig, sections),
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.config.style.sections).toEqual(sections);
   });
 
   it("reports failure when the model never proposes a draft", async () => {

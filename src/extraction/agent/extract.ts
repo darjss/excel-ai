@@ -2,6 +2,7 @@ import { type PortalConfig, parsePortalConfig, repairAndParse } from "@/portal-c
 import { compactWorkbook, renderPrompt } from "../compact/compact";
 import { parseWorkbook } from "../parse/sheet-facts";
 import { progress, type ProgressEmitter } from "../job/events";
+import { applyStyle, type StyleStageDeps } from "../style";
 import { type VerifyReport, verifyPortalConfig } from "../verify/draft";
 import { runAgentLoop } from "./loop";
 import { type ChatFn, DEFAULT_MODELS, type ModelSlots } from "./models";
@@ -50,27 +51,31 @@ export const runExtraction = async (
     return { ok: false, reason: "The model finished without proposing a draft." };
   }
 
+  const style: StyleStageDeps = { chat: deps.chat, model: models.auxiliary, emit };
+
   emit(progress("verify", "Double-checking every money calculation"));
   const firstPass = parsePortalConfig(loop.draft);
-  if (firstPass.ok) return finalize(firstPass.data, facts, emit, loop.iterations);
+  if (firstPass.ok) return finalize(firstPass.data, facts, emit, loop.iterations, style);
 
   const repaired = await repairAndParse(loop.draft, createRepairFn(deps.chat, models.auxiliary));
   if (!repaired.ok) return { ok: false, reason: repaired.error.message, details: repaired.error.details };
-  return finalize(repaired.data, facts, emit, loop.iterations);
+  return finalize(repaired.data, facts, emit, loop.iterations, style);
 };
 
-const finalize = (
+const finalize = async (
   config: PortalConfig,
   facts: ReturnType<typeof parseWorkbook>,
   emit: ProgressEmitter,
   iterations: number,
-): ExtractionOutcome => {
+  style: StyleStageDeps,
+): Promise<ExtractionOutcome> => {
   const verified = verifyPortalConfig(config, facts);
   emit(progress("validate", "Locking in the confirmed portal draft"));
   const finalParse = parsePortalConfig(verified.config);
   if (!finalParse.ok) {
     return { ok: false, reason: finalParse.error.message, details: finalParse.error.details };
   }
+  const styled = await applyStyle(finalParse.data, style);
   emit(progress("done", "Your portal draft is ready to review"));
-  return { ok: true, config: finalParse.data, report: verified.report, iterations };
+  return { ok: true, config: styled, report: verified.report, iterations };
 };

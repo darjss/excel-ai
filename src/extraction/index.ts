@@ -10,5 +10,7 @@ export { runExtraction } from "./agent/extract";
 export type { ExtractionDeps, ExtractionOutcome } from "./agent/extract";
 export { createChatFn, gatewayFromEnv, DEFAULT_MODELS, TokenStarvationError } from "./agent/models";
 export type { ChatFn, ChatRequest, ChatResult, ModelSlots } from "./agent/models";
+export { applyStyle, buildDefaultStyle, CURATED_PALETTES } from "./style";
+export type { PaletteKey, StyleStageDeps } from "./style";
 export { progress } from "./job/events";
 export type { ProgressEvent, ProgressEmitter, ExtractionPhase } from "./job/events";

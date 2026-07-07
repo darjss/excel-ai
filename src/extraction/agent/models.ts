@@ -38,6 +38,7 @@ export interface ChatRequest {
   messages: ChatMessage[];
   tools?: ToolSchema[];
   maxCompletionTokens: number;
+  temperature?: number;
 }
 
 export type ChatFn = (request: ChatRequest) => Promise<ChatResult>;
@@ -109,6 +110,7 @@ export const createChatFn = (ai: Ai, gateway?: GatewayConfig): ChatFn => {
       max_completion_tokens: request.maxCompletionTokens,
     };
     if (request.tools !== undefined && request.tools.length > 0) inputs.tools = request.tools;
+    if (request.temperature !== undefined) inputs.temperature = request.temperature;
     const options = gateway !== undefined ? { gateway: { id: gateway.id } } : undefined;
     const raw = await ai.run(request.model, inputs, options);
     return parseResponse(raw, request.model);
