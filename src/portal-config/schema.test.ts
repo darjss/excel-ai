@@ -59,24 +59,23 @@ describe("portalConfigSchema rejects invalid configs", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("rejects a config with zero products (empty-skeleton failure class)", () => {
+  it("rejects an empty skeleton with zero rules and only a trivial finding", () => {
     const config = {
       ...bakeryConfig,
       catalog: { categories: [], tables: [] },
+      rules: [],
+      findings: [
+        {
+          id: "f-trivial",
+          confidence: "low",
+          plainEnglish: "Nothing conclusive was extracted.",
+          accepted: false,
+        },
+      ],
     };
     const result = parsePortalConfig(config);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.issues.join(" ")).toContain("at least one product");
-  });
-
-  it("rejects a config where every finding is low confidence (all-zero confidence)", () => {
-    const config = {
-      ...bakeryConfig,
-      findings: bakeryConfig.findings.map((finding) => ({ ...finding, confidence: "low" })),
-    };
-    const result = parsePortalConfig(config);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.issues.join(" ")).toContain("non-low-confidence");
+    if (!result.ok) expect(result.error.details.map((d) => d.message).join(" ")).toContain("rule");
   });
 
   it("rejects an empty findings list", () => {
@@ -84,12 +83,16 @@ describe("portalConfigSchema rejects invalid configs", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("reports issues as readable path strings", () => {
+  it("reports issues as structured path/message details", () => {
     const result = parsePortalConfig({ ...bakeryConfig, version: 2 });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.code).toBe("validation");
-      expect(result.error.issues.length).toBeGreaterThan(0);
+      expect(result.error.details.length).toBeGreaterThan(0);
+      expect(result.error.details[0]).toMatchObject({
+        path: expect.any(String),
+        message: expect.any(String),
+      });
     }
   });
 });
