@@ -12,8 +12,10 @@ import { createId } from "@paralleldrive/cuid2";
 import { getAgentByName } from "agents";
 import { env } from "cloudflare:workers";
 import { Elysia, t } from "elysia";
+import { env as appEnv } from "@/env";
+import { parsePortalConfig } from "@/portal-config";
 import type { ExtractionAgent, ExtractionState } from "@/server/agents/extraction";
-import { AppError } from "../errors";
+import { AppError, NotFoundError } from "../errors";
 import { consumeExtractionToken } from "../rate-limit";
 
 const SSE_HEADERS = {
@@ -109,4 +111,23 @@ export const extractionRoute = new Elysia({ prefix: "/extraction" })
       },
     });
     return new Response(stream, { headers: SSE_HEADERS });
-  });
+  })
+  .post(
+    "/:id/seed",
+    async ({ params, body, status }) => {
+      if (appEnv.EXTRACTION_SEED_ENABLED !== "true") {
+        throw new NotFoundError("Extraction seed endpoint is disabled.");
+      }
+      const parsed = parsePortalConfig(body);
+      if (!parsed.ok) {
+        throw new AppError("validation", parsed.error.message, parsed.error.details);
+      }
+      const agent = await getAgent(params.id);
+      await agent.seed(parsed.data);
+      return status(202, { jobId: params.id });
+    },
+    {
+      body: t.Unknown(),
+      response: { 202: t.Object({ jobId: t.String() }) },
+    },
+  );

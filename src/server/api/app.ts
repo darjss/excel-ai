@@ -8,6 +8,7 @@ import { extractionRoute } from "./routes/extraction";
 import { healthRoute } from "./routes/health";
 import { portalRoute } from "./routes/portal";
 import { projectsRoute } from "./routes/projects";
+import { reviewRoute } from "./routes/review";
 
 export const app = new Elysia({ prefix: "/api", aot: false })
   .use(errorPlugin)
@@ -18,6 +19,7 @@ export const app = new Elysia({ prefix: "/api", aot: false })
   .use(adminRoute)
   .use(agentRoute)
   .use(extractionRoute)
+  .use(reviewRoute)
   .use(portalRoute);
 
 export type App = typeof app;

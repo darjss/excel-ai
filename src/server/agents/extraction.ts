@@ -4,6 +4,7 @@ import type { PortalConfig } from "@/portal-config";
 import { runExtraction } from "@/extraction/agent/extract";
 import { createChatFn, gatewayFromEnv } from "@/extraction/agent/models";
 import { type ProgressEvent, progress } from "@/extraction/job/events";
+import { applyReviewAction, hasFinding, type ReviewAction } from "@/review/mutations";
 
 export type ExtractionStatus = "idle" | "running" | "done" | "error";
 
@@ -12,13 +13,21 @@ export interface ExtractionState {
   events: ProgressEvent[];
   config: PortalConfig | null;
   error: string | null;
+  published: boolean;
+  slug: string | null;
 }
+
+export type ReviewResult =
+  | { ok: true; config: PortalConfig }
+  | { ok: false; reason: "not_ready" | "unknown_finding" };
 
 const INITIAL_STATE: ExtractionState = {
   status: "idle",
   events: [],
   config: null,
   error: null,
+  published: false,
+  slug: null,
 };
 
 export class ExtractionAgent extends Agent<Cloudflare.Env, ExtractionState> {
@@ -50,6 +59,31 @@ export class ExtractionAgent extends Agent<Cloudflare.Env, ExtractionState> {
     } catch (error) {
       this.fail(error instanceof Error ? error.message : "Extraction failed unexpectedly.");
     }
+  }
+
+  seed(config: PortalConfig): void {
+    this.setState({
+      ...INITIAL_STATE,
+      status: "done",
+      config,
+      events: [progress("done", "Seeded draft ready to review")],
+    });
+  }
+
+  applyReview(action: ReviewAction): ReviewResult {
+    if (this.state.status !== "done" || this.state.config === null) {
+      return { ok: false, reason: "not_ready" };
+    }
+    if (action.type === "finding-decision" && !hasFinding(this.state.config, action.findingId)) {
+      return { ok: false, reason: "unknown_finding" };
+    }
+    const config = applyReviewAction(this.state.config, action);
+    this.setState({ ...this.state, config, published: false });
+    return { ok: true, config };
+  }
+
+  markPublished(slug: string): void {
+    this.setState({ ...this.state, published: true, slug });
   }
 
   snapshot(): ExtractionState {
