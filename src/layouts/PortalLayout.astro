@@ -1,0 +1,54 @@
+---
+import "@fontsource-variable/inter";
+import "@/styles/global.css";
+import { PortalBadge } from "@/components/portal/Badge";
+import { PortalNav } from "@/components/portal/PortalNav";
+import { portalThemeStyleAttr } from "@/components/portal/theme";
+import { env } from "@/env";
+import type { PortalConfig } from "@/portal-config";
+
+interface Props {
+  config: PortalConfig;
+  basePath: string;
+  title: string;
+  description: string;
+}
+
+const { config, basePath, title, description } = Astro.props;
+const themeStyle = portalThemeStyleAttr(config.style.theme);
+const canonical = new URL(Astro.url.pathname, env.APP_URL).toString();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content={config.business.name} />
+  </head>
+  <body>
+    <div
+      class="min-h-screen bg-[var(--portal-background)] text-[var(--portal-foreground)]"
+      style={`${themeStyle};font-family:var(--portal-font-body)`}
+    >
+      <div class="mx-auto w-full max-w-5xl px-6">
+        <PortalNav
+          businessName={config.business.name}
+          basePath={basePath}
+          orderCtaLabel={config.style.copy.orderCtaLabel}
+        />
+        <main>
+          <slot />
+        </main>
+        <PortalBadge rootUrl={env.APP_URL} />
+      </div>
+    </div>
+  </body>
+</html>

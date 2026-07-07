@@ -13,6 +13,8 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: v.optional(v.string()),
     GOOGLE_CLIENT_SECRET: v.optional(v.string()),
     SSO_ENABLED: v.optional(v.picklist(["true", "false"]), "false"),
+    PORTAL_HOST_SUFFIX: v.optional(v.string()),
+    PORTAL_SEED_ENABLED: v.optional(v.picklist(["true", "false"]), "false"),
   },
   runtimeEnv: {
     BETTER_AUTH_SECRET: runtime.BETTER_AUTH_SECRET,
@@ -24,6 +26,8 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: runtime.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: runtime.GOOGLE_CLIENT_SECRET,
     SSO_ENABLED: runtime.SSO_ENABLED,
+    PORTAL_HOST_SUFFIX: runtime.PORTAL_HOST_SUFFIX,
+    PORTAL_SEED_ENABLED: runtime.PORTAL_SEED_ENABLED,
   },
   emptyStringAsUndefined: true,
 });
