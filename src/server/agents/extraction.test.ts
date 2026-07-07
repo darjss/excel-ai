@@ -10,7 +10,7 @@ import { ExtractionAgent, type ExtractionState } from "./extraction";
 const configWith = (name: string, findings: PortalConfig["findings"] = []): PortalConfig =>
   ({ business: { name }, findings }) as unknown as PortalConfig;
 
-const harness = () => {
+const harness = (overrides: Partial<ExtractionState> = {}) => {
   let state: ExtractionState = {
     status: "idle",
     events: [],
@@ -19,6 +19,9 @@ const harness = () => {
     published: false,
     slug: null,
     answeredFindingIds: [],
+    runStartedAt: null,
+    watchdogId: null,
+    ...overrides,
   };
   const agent: ExtractionAgent = Object.create(ExtractionAgent.prototype);
   Object.defineProperty(agent, "state", { get: () => state });
@@ -74,5 +77,31 @@ describe("ExtractionAgent.markPublished", () => {
     agent.markPublished("acme");
     expect(snapshot().published).toBe(true);
     expect(snapshot().slug).toBe("acme");
+  });
+});
+
+describe("ExtractionAgent.onWatchdogAlarm", () => {
+  it("fails a hung run into a needs-human outcome the SSE terminal frame can read", async () => {
+    const { agent, snapshot } = harness({
+      status: "running",
+      runStartedAt: 0,
+      watchdogId: "w1",
+      events: [],
+    });
+    await agent.onWatchdogAlarm();
+
+    const after = snapshot();
+    expect(after.status).toBe("needs-human");
+    expect(after.outcome?.kind).toBe("needs-human");
+    if (after.outcome?.kind === "needs-human") expect(after.outcome.reason).toBe("internal");
+  });
+
+  it("leaves a run that already settled untouched", async () => {
+    const { agent, snapshot } = harness();
+    agent.seed(configWith("Acme"));
+    await agent.onWatchdogAlarm();
+
+    expect(snapshot().status).toBe("ready");
+    expect(snapshot().outcome?.kind).toBe("ready");
   });
 });

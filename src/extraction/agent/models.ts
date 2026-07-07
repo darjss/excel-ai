@@ -50,6 +50,32 @@ export class TokenStarvationError extends Error {
   }
 }
 
+export class TimeoutError extends Error {
+  constructor(
+    readonly model: string,
+    readonly timeoutMs: number,
+  ) {
+    super(`Model ${model} did not respond within ${timeoutMs}ms.`);
+    this.name = "TimeoutError";
+  }
+}
+
+export const DEFAULT_MODEL_CALL_TIMEOUT_MS = 120_000;
+
+export const withTimeout = (chat: ChatFn, timeoutMs: number): ChatFn => {
+  return async (request) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new TimeoutError(request.model, timeoutMs)), timeoutMs);
+    });
+    try {
+      return await Promise.race([chat(request), timeout]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  };
+};
+
 interface GatewayConfig {
   id: string;
 }
