@@ -1,7 +1,12 @@
 allowBuilds:
+  '@google/genai': false
+  '@mongodb-js/zstd': false
   "@prisma/client": false
   better-sqlite3: true
+  core-js-pure: false
   esbuild: true
+  node-liblzma: false
+  protobufjs: false
   sharp: false
   workerd: true
 minimumReleaseAgeExclude:
