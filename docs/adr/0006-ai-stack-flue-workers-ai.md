@@ -10,4 +10,4 @@ Two structural consequences, both mandatory regardless of model:
 
 Workers AI loop gotchas (from the bench): the binding already returns OpenAI-shaped responses with tool_calls; use `max_completion_tokens` (not `max_tokens`); budget generously because reasoning content consumes the completion budget (starvation returns empty content with finish_reason "length"); never call through `wrangler dev` in production paths — it crashes silently and hangs clients.
 
-Supporting choices: Resend behind the starter's sendEmail seam; R2 for uploaded workbooks; Import polling via Flue scheduling on the per-Supplier DO.
+Supporting choices: Resend behind the starter's sendEmail seam; R2 for uploaded workbooks; Import polling via Agents SDK schedules/alarms on the per-Supplier DO.
