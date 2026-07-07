@@ -1,0 +1,14 @@
+export * from "./types";
+export { parseWorkbook } from "./parse/sheet-facts";
+export { compactWorkbook, renderPrompt, promptSize } from "./compact/compact";
+export type { CompactFacts, CompactSheet } from "./compact/compact";
+export { detectAnomalies, detectTaxSignals } from "./verify/verifier";
+export type { FormulaAnomaly, TaxSignal } from "./verify/verifier";
+export { verifyPortalConfig } from "./verify/draft";
+export type { VerifyReport, VerifyResult, RuleDowngrade } from "./verify/draft";
+export { runExtraction } from "./agent/extract";
+export type { ExtractionDeps, ExtractionOutcome } from "./agent/extract";
+export { createChatFn, gatewayFromEnv, DEFAULT_MODELS, TokenStarvationError } from "./agent/models";
+export type { ChatFn, ChatRequest, ChatResult, ModelSlots } from "./agent/models";
+export { progress } from "./job/events";
+export type { ProgressEvent, ProgressEmitter, ExtractionPhase } from "./job/events";

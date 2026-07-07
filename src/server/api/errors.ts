@@ -6,6 +6,7 @@ export type ErrorCode =
   | "not_found"
   | "validation"
   | "conflict"
+  | "payload_too_large"
   | "rate_limited"
   | "internal";
 
@@ -23,6 +24,7 @@ const statusByCode: Record<ErrorCode, number> = {
   not_found: 404,
   validation: 422,
   conflict: 409,
+  payload_too_large: 413,
   rate_limited: 429,
   internal: 500,
 };
