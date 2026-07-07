@@ -8,6 +8,7 @@ import { BillingPage } from "./routes/BillingPage";
 import { OrdersLanding } from "./routes/OrdersLanding";
 import { OrdersPage } from "./routes/OrdersPage";
 import { ProjectsPage } from "./routes/ProjectsPage";
+import { ReviewPage } from "./routes/ReviewPage";
 import { SettingsPage } from "./routes/SettingsPage";
 
 export const AppRoot = () => (
@@ -16,6 +17,7 @@ export const AppRoot = () => (
       <Route path="/" component={ProjectsPage} />
       <Route path="/orders" component={OrdersLanding} />
       <Route path="/orders/:slug" component={OrdersPage} />
+      <Route path="/review/:jobId" component={ReviewPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/billing" component={BillingPage} />
       <Route path="/admin" component={AdminPage} />
