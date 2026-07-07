@@ -2,7 +2,7 @@ import { treaty } from "@elysiajs/eden";
 import type { App } from "@/server/api/app";
 import type { ErrorCode, ErrorEnvelope } from "@/server/api/errors";
 
-const origin = typeof window === "undefined" ? "http://localhost:4321" : window.location.origin;
+const origin = typeof window === "undefined" ? "http://localhost:5321" : window.location.origin;
 
 export const api = treaty<App>(origin, {
   fetch: { credentials: "include" },
