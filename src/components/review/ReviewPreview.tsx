@@ -6,11 +6,15 @@ import { PortalPreviewFrame } from "./PortalPreviewFrame";
 
 export const ReviewPreview = (props: { jobId: string }) => {
   const snapshot = createExtractionStream(() => props.jobId);
+  const readyConfig = () => {
+    const outcome = snapshot().outcome;
+    return outcome?.kind === "ready" ? outcome.config : null;
+  };
 
   return (
     <div class="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-16">
       <Show
-        when={snapshot().config}
+        when={readyConfig()}
         fallback={
           <div class="bg-card rounded-xl border p-6">
             <h1 class="mb-4 text-2xl font-semibold">Reading your spreadsheet…</h1>

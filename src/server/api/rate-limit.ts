@@ -1,5 +1,6 @@
 const HOUR_MS = 60 * 60 * 1000;
-const DEFAULT_LIMIT = 5;
+const DEFAULT_EXTRACTION_LIMIT = 5;
+const DEFAULT_WHITE_GLOVE_LIMIT = 3;
 
 interface Bucket {
   tokens: number;
@@ -12,9 +13,14 @@ export interface RateLimitDecision {
   remaining: number;
 }
 
-const parseLimit = (raw: string | undefined): number => {
+export interface RateLimitStore {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+}
+
+const parseLimit = (raw: string | undefined, fallback: number): number => {
   const value = Number(raw);
-  return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_LIMIT;
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
 };
 
 const parseBucket = (raw: string | null, limit: number, now: number): Bucket => {
@@ -39,14 +45,16 @@ const refill = (bucket: Bucket, limit: number, now: number): number => {
   return Math.min(limit, bucket.tokens + restored);
 };
 
-export const consumeExtractionToken = async (
-  cache: KVNamespace,
+const consumeToken = async (
+  cache: RateLimitStore,
+  scope: string,
   ip: string,
   limitVar: string | undefined,
+  defaultLimit: number,
 ): Promise<RateLimitDecision> => {
-  const limit = parseLimit(limitVar);
+  const limit = parseLimit(limitVar, defaultLimit);
   const now = Date.now();
-  const key = `ratelimit:extraction:${ip}`;
+  const key = `ratelimit:${scope}:${ip}`;
   const stored = parseBucket(await cache.get(key), limit, now);
   const available = refill(stored, limit, now);
 
@@ -58,3 +66,15 @@ export const consumeExtractionToken = async (
   await cache.put(key, JSON.stringify(next), { expirationTtl: 3600 });
   return { allowed: true, limit, remaining: Math.floor(next.tokens) };
 };
+
+export const consumeExtractionToken = (
+  cache: RateLimitStore,
+  ip: string,
+  limitVar: string | undefined,
+): Promise<RateLimitDecision> => consumeToken(cache, "extraction", ip, limitVar, DEFAULT_EXTRACTION_LIMIT);
+
+export const consumeWhiteGloveToken = (
+  cache: RateLimitStore,
+  ip: string,
+  limitVar: string | undefined,
+): Promise<RateLimitDecision> => consumeToken(cache, "white-glove", ip, limitVar, DEFAULT_WHITE_GLOVE_LIMIT);

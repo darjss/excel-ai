@@ -8,6 +8,7 @@ import { summarizeFindings } from "@/review/summary";
 import type { ExtractionAgent, ExtractionState } from "@/server/agents/extraction";
 import { db } from "@/server/db";
 import { portalDraft } from "@/server/db/schema";
+import { canClaim, readyConfig } from "@/server/extraction/claim";
 import { purgePortalCache, portalUrlFor } from "@/server/portal/cache";
 import { publishPortalConfig } from "@/server/portal/store";
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from "../errors";
@@ -31,16 +32,17 @@ const requireOwnedDraft = async (jobId: string, userId: string) => {
 };
 
 const draftView = (snapshot: ExtractionState, slug: string | null) => {
-  if (snapshot.config === null) throw new NotFoundError("This draft has no extracted config yet.");
+  const config = readyConfig(snapshot);
+  if (config === null) throw new NotFoundError("This draft has no extracted config yet.");
   const answered = new Set(snapshot.answeredFindingIds);
   return {
     status: snapshot.status,
     published: snapshot.published,
     slug,
-    config: deriveEffectiveConfig(snapshot.config),
-    findings: snapshot.config.findings,
+    config: deriveEffectiveConfig(config),
+    findings: config.findings,
     answeredFindingIds: snapshot.answeredFindingIds,
-    summary: summarizeFindings(snapshot.config.findings, answered),
+    summary: summarizeFindings(config.findings, answered),
   };
 };
 
@@ -61,7 +63,7 @@ export const reviewRoute = new Elysia({ prefix: "/review" })
     async ({ user, params }) => {
       const agent = await getAgent(params.jobId);
       const snapshot: ExtractionState = await agent.snapshot();
-      if (snapshot.status !== "done") {
+      if (!canClaim(snapshot.status)) {
         throw new ConflictError("Extraction is not finished, so it cannot be claimed yet.");
       }
 
@@ -147,10 +149,11 @@ export const reviewRoute = new Elysia({ prefix: "/review" })
 
       const agent = await getAgent(params.jobId);
       const snapshot: ExtractionState = await agent.snapshot();
-      if (snapshot.config === null) throw new NotFoundError("This draft has no extracted config.");
+      const config = readyConfig(snapshot);
+      if (config === null) throw new NotFoundError("This draft has no extracted config.");
 
       const openQuestions = summarizeFindings(
-        snapshot.config.findings,
+        config.findings,
         new Set(snapshot.answeredFindingIds),
       ).questions;
       if (openQuestions > 0) {
@@ -159,7 +162,7 @@ export const reviewRoute = new Elysia({ prefix: "/review" })
         });
       }
 
-      const effective = deriveEffectiveConfig(snapshot.config);
+      const effective = deriveEffectiveConfig(config);
 
       const ownerScope = and(
         eq(portalDraft.jobId, params.jobId),

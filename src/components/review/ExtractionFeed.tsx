@@ -37,7 +37,7 @@ export const ExtractionFeed = (props: ExtractionFeedProps) => {
 
   createEffect(() => {
     const current = snapshot();
-    if (current.status === "done" && current.config) props.onDone?.(current.config);
+    if (current.outcome?.kind === "ready") props.onDone?.(current.outcome.config);
     if (current.status === "error" && current.error) props.onError?.(current.error);
   });
 

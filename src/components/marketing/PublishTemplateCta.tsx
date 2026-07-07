@@ -41,7 +41,10 @@ const previewProducts = (config: PortalConfig) =>
 const PreviewCard = (props: { jobId: string; slug: string }) => {
   const snapshot = createExtractionStream(() => props.jobId);
   const events = createMemo(() => snapshot().events);
-  const config = createMemo(() => snapshot().config);
+  const config = createMemo(() => {
+    const outcome = snapshot().outcome;
+    return outcome?.kind === "ready" ? outcome.config : null;
+  });
 
   return (
     <div class="rounded-xl border p-6">
@@ -62,11 +65,13 @@ const PreviewCard = (props: { jobId: string; slug: string }) => {
         }
       >
         <div class="flex items-center gap-2">
-          <Show when={snapshot().status !== "done"}>
+          <Show when={snapshot().status !== "resolved"}>
             <Loader class="text-muted-foreground size-4 animate-spin" />
           </Show>
           <p class="text-sm font-medium">
-            {snapshot().status === "done" ? "Portal preview ready" : "Building your portal preview"}
+            {snapshot().status === "resolved"
+              ? "Portal preview ready"
+              : "Building your portal preview"}
           </p>
         </div>
 
