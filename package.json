@@ -12,6 +12,7 @@
     "deploy": "astro build && wrangler deploy",
     "typecheck": "astro check",
     "lint": "vp lint",
+    "test": "vp test run",
     "fmt": "vp fmt",
     "check": "astro check && vp lint",
     "auth:generate": "better-auth generate --output src/server/db/auth-schema.ts --config scripts/auth-schema.config.ts --yes",
@@ -64,6 +65,7 @@
     "tsx": "^4.19.0",
     "typescript": "^5.9.3",
     "vite-plus": "^0.1.24",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.24",
     "wrangler": "^4.107.0"
   }
 }
