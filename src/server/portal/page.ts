@@ -6,6 +6,7 @@ import { loadPublishedConfig } from "./store";
 export interface PortalPageData {
   config: PortalConfig;
   basePath: string;
+  slug: string;
 }
 
 export const loadPortalPage = async (
@@ -22,5 +23,5 @@ export const loadPortalPage = async (
   const config = await loadPublishedConfig(target.slug);
   if (!config) return null;
 
-  return { config, basePath: target.basePath };
+  return { config, basePath: target.basePath, slug: target.slug };
 };
