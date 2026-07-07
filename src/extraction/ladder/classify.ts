@@ -1,5 +1,5 @@
 import type { CompactFacts } from "../compact/compact";
-import type { ChatFn } from "../agent/models";
+import { type ChatFn, TimeoutError } from "../agent/models";
 import type { SheetFacts, WorkbookFacts } from "../types";
 import type { SpeciesSignals, SpeciesVerdict } from "./types";
 
@@ -160,7 +160,8 @@ export const classifySpecies = async (
       method: "model",
       signals: aggregated,
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof TimeoutError) throw error;
     return { verdict: "order-sheet", method: "fallback", signals: aggregated };
   }
 };

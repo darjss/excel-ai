@@ -54,5 +54,7 @@
     "PORTAL_HOST_SUFFIX": ".portals.localhost:5321",
     "PORTAL_SEED_ENABLED": "false",
     "EXTRACTION_SEED_ENABLED": "false",
+    "MODEL_CALL_TIMEOUT_MS": "120000",
+    "EXTRACTION_WALL_CLOCK_BUDGET_MS": "600000",
   },
 }

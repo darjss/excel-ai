@@ -20,6 +20,20 @@ export const env = createEnv({
     PORTAL_HOST_SUFFIX: v.optional(v.string()),
     PORTAL_SEED_ENABLED: v.optional(v.picklist(["true", "false"]), "false"),
     EXTRACTION_SEED_ENABLED: v.optional(v.picklist(["true", "false"]), "false"),
+    MODEL_CALL_TIMEOUT_MS: v.pipe(
+      v.optional(v.string(), "120000"),
+      v.transform(Number),
+      v.number(),
+      v.integer(),
+      v.minValue(1),
+    ),
+    EXTRACTION_WALL_CLOCK_BUDGET_MS: v.pipe(
+      v.optional(v.string(), "600000"),
+      v.transform(Number),
+      v.number(),
+      v.integer(),
+      v.minValue(1),
+    ),
   },
   runtimeEnv: {
     BETTER_AUTH_SECRET: runtime.BETTER_AUTH_SECRET,
@@ -38,6 +52,8 @@ export const env = createEnv({
     PORTAL_HOST_SUFFIX: runtime.PORTAL_HOST_SUFFIX,
     PORTAL_SEED_ENABLED: runtime.PORTAL_SEED_ENABLED,
     EXTRACTION_SEED_ENABLED: runtime.EXTRACTION_SEED_ENABLED,
+    MODEL_CALL_TIMEOUT_MS: runtime.MODEL_CALL_TIMEOUT_MS,
+    EXTRACTION_WALL_CLOCK_BUDGET_MS: runtime.EXTRACTION_WALL_CLOCK_BUDGET_MS,
   },
   emptyStringAsUndefined: true,
 });

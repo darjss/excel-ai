@@ -40,6 +40,8 @@ describe("readyConfig", () => {
     published: false,
     slug: null,
     answeredFindingIds: [],
+    runStartedAt: null,
+    watchdogId: null,
   };
   const config = { business: { name: "Acme" }, findings: [] } as unknown as PortalConfig;
 
