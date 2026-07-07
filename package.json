@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.8.0",
   "scripts": {
     "postinstall": "wrangler types",
     "dev": "astro dev",
@@ -18,7 +19,8 @@
     "db:migrate:local": "wrangler d1 migrations apply sheetstand-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply sheetstand-db --remote",
     "seed": "tsx scripts/seed.ts",
-    "polar:setup": "tsx scripts/polar-setup.ts"
+    "polar:setup": "tsx scripts/polar-setup.ts",
+    "extraction:ci": "tsx scripts/extraction-ci.ts"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.1.1",
