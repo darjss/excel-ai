@@ -12,12 +12,14 @@ export interface AgentLoopArgs {
   maxIterations?: number;
   maxCompletionTokens?: number;
   onNarrate?: (message: string) => void;
+  signal?: AbortSignal;
 }
 
 export interface AgentLoopResult {
   draft: unknown;
   iterations: number;
   transcript: ChatMessage[];
+  aborted: boolean;
 }
 
 const parseArgs = (raw: string): Record<string, unknown> => {
@@ -38,6 +40,10 @@ export const runAgentLoop = async (args: AgentLoopArgs): Promise<AgentLoopResult
   ];
 
   for (let iteration = 1; iteration <= maxIterations; iteration += 1) {
+    if (args.signal?.aborted === true) {
+      return { draft: args.execution.getDraft(), iterations: iteration - 1, transcript: messages, aborted: true };
+    }
+
     const result = await args.chat({
       model: args.model,
       messages,
@@ -48,8 +54,8 @@ export const runAgentLoop = async (args: AgentLoopArgs): Promise<AgentLoopResult
     if (result.toolCalls.length === 0) {
       messages.push({ role: "assistant", content: result.content });
       const draft = args.execution.getDraft();
-      if (draft !== undefined) return { draft, iterations: iteration, transcript: messages };
-      return { draft: undefined, iterations: iteration, transcript: messages };
+      if (draft !== undefined) return { draft, iterations: iteration, transcript: messages, aborted: false };
+      return { draft: undefined, iterations: iteration, transcript: messages, aborted: false };
     }
 
     messages.push({ role: "assistant", content: result.content, tool_calls: result.toolCalls });
@@ -64,9 +70,9 @@ export const runAgentLoop = async (args: AgentLoopArgs): Promise<AgentLoopResult
     }
 
     if (submitted) {
-      return { draft: args.execution.getDraft(), iterations: iteration, transcript: messages };
+      return { draft: args.execution.getDraft(), iterations: iteration, transcript: messages, aborted: false };
     }
   }
 
-  return { draft: args.execution.getDraft(), iterations: maxIterations, transcript: messages };
+  return { draft: args.execution.getDraft(), iterations: maxIterations, transcript: messages, aborted: false };
 };

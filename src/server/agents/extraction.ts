@@ -60,6 +60,7 @@ const TERMINAL: ReadonlySet<ExtractionStatus> = new Set([
 
 export class ExtractionAgent extends Agent<Cloudflare.Env, ExtractionState> {
   initialState = INITIAL_STATE;
+  private abortController: AbortController | null = null;
 
   async start(r2Key: string): Promise<void> {
     if (this.state.status === "running") return;
@@ -142,13 +143,17 @@ export class ExtractionAgent extends Agent<Cloudflare.Env, ExtractionState> {
       Date.now(),
     );
     if (action === "ignore") return;
+    this.abortController?.abort();
     this.apply({ kind: "needs-human", reason: "internal", message: WATCHDOG_MESSAGE });
   }
 
   private async run(r2Key: string, hints?: BuilderHints): Promise<void> {
+    const controller = new AbortController();
+    this.abortController = controller;
     try {
       const object = await env.UPLOADS.get(r2Key);
       if (object === null) {
+        if (this.state.status !== "running") return;
         this.apply({ kind: "needs-human", reason: "internal", message: NOT_FOUND_MESSAGE });
         return;
       }
@@ -156,17 +161,28 @@ export class ExtractionAgent extends Agent<Cloudflare.Env, ExtractionState> {
       const chat = withTimeout(
         createChatFn(env.AI, gatewayFromEnv(env.AI_GATEWAY_ID)),
         modelCallTimeoutMs(),
+        controller.signal,
       );
-      const outcome = await runExtraction(bytes, { chat, emit: (event) => this.push(event) }, hints);
+      const outcome = await runExtraction(
+        bytes,
+        { chat, emit: (event) => this.push(event), signal: controller.signal },
+        hints,
+      );
+      if (outcome.kind === "aborted") return;
+      if (this.state.status !== "running") return;
       this.apply(outcome);
     } catch {
+      if (this.state.status !== "running") return;
       this.apply({ kind: "needs-human", reason: "internal", message: INTERNAL_MESSAGE });
     } finally {
+      this.abortController = null;
       await this.clearWatchdog();
     }
   }
 
   private async armWatchdog(): Promise<{ id: string; startedAt: number }> {
+    const existing = this.state.watchdogId;
+    if (existing !== null) await this.cancelSchedule(existing);
     const startedAt = Date.now();
     const budgetSeconds = Math.max(1, Math.ceil(wallClockBudgetMs() / 1000));
     const schedule = await this.schedule(budgetSeconds, "onWatchdogAlarm");
@@ -180,6 +196,7 @@ export class ExtractionAgent extends Agent<Cloudflare.Env, ExtractionState> {
   }
 
   private apply(outcome: ExtractionOutcome): void {
+    if (TERMINAL.has(this.state.status)) return;
     this.setState({ ...this.state, status: outcome.kind, outcome });
   }
 

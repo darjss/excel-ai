@@ -26,16 +26,20 @@ export interface ExtractionDeps {
   chat: ChatFn;
   models?: ModelSlots;
   emit?: ProgressEmitter;
+  signal?: AbortSignal;
 }
 
 export type { ExtractionOutcome };
+
+export type ExtractionResult = ExtractionOutcome | { kind: "aborted" };
 
 type WorkbookFacts = ReturnType<typeof parseWorkbook>;
 
 type DraftResult =
   | { kind: "config"; config: PortalConfig; report: VerifyReport; iterations: number }
   | { kind: "no-draft" }
-  | { kind: "invalid" };
+  | { kind: "invalid" }
+  | { kind: "aborted" };
 
 const needsHuman = (reason: NeedsHumanReason): ExtractionOutcome => ({
   kind: "needs-human",
@@ -60,8 +64,10 @@ const produceDraft = async (
     execution,
     maxCompletionTokens: 16384,
     onNarrate: (message) => emit(progress("reason", message)),
+    signal: deps.signal,
   });
 
+  if (loop.aborted) return { kind: "aborted" };
   if (loop.draft === undefined) return { kind: "no-draft" };
 
   emit(progress("verify", "Double-checking every money calculation"));
@@ -96,7 +102,7 @@ export const runExtraction = async (
   bytes: Uint8Array,
   deps: ExtractionDeps,
   hints?: BuilderHints,
-): Promise<ExtractionOutcome> => {
+): Promise<ExtractionResult> => {
   const models = deps.models ?? DEFAULT_MODELS;
   const emit = deps.emit ?? (() => {});
 
@@ -126,6 +132,7 @@ export const runExtraction = async (
 
   emit(progress("reason", "Working out your catalog and pricing rules"));
   const draft = await produceDraft(facts, buildUserPrompt(compact, facts, hints), deps, models, emit);
+  if (draft.kind === "aborted") return { kind: "aborted" };
   if (draft.kind === "no-draft") return needsHuman("no-draft");
   if (draft.kind === "invalid") return needsHuman("internal");
 

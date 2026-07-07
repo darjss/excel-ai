@@ -60,18 +60,35 @@ export class TimeoutError extends Error {
   }
 }
 
+export class ModelCallAbortedError extends Error {
+  constructor(readonly model: string) {
+    super(`Model ${model} call was aborted before it settled.`);
+    this.name = "ModelCallAbortedError";
+  }
+}
+
 export const DEFAULT_MODEL_CALL_TIMEOUT_MS = 120_000;
 
-export const withTimeout = (chat: ChatFn, timeoutMs: number): ChatFn => {
+export const withTimeout = (chat: ChatFn, timeoutMs: number, signal?: AbortSignal): ChatFn => {
   return async (request) => {
+    if (signal?.aborted === true) throw new ModelCallAbortedError(request.model);
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
+    const chatPromise = chat(request);
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new TimeoutError(request.model, timeoutMs)), timeoutMs);
     });
+    const aborted = new Promise<never>((_, reject) => {
+      if (signal === undefined) return;
+      onAbort = () => reject(new ModelCallAbortedError(request.model));
+      signal.addEventListener("abort", onAbort, { once: true });
+    });
     try {
-      return await Promise.race([chat(request), timeout]);
+      return await Promise.race([chatPromise, timeout, aborted]);
     } finally {
       if (timer !== undefined) clearTimeout(timer);
+      if (signal !== undefined && onAbort !== undefined) signal.removeEventListener("abort", onAbort);
+      void chatPromise.catch(() => {});
     }
   };
 };
