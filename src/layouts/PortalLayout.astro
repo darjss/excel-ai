@@ -12,11 +12,13 @@ interface Props {
   basePath: string;
   title: string;
   description: string;
+  noindex?: boolean;
+  canonicalPath?: string;
 }
 
-const { config, basePath, title, description } = Astro.props;
+const { config, basePath, title, description, noindex = false, canonicalPath } = Astro.props;
 const themeStyle = portalThemeStyleAttr(config.style.theme);
-const canonical = new URL(Astro.url.pathname, env.APP_URL).toString();
+const canonical = new URL(canonicalPath ?? Astro.url.pathname, env.APP_URL).toString();
 ---
 
 <!doctype html>
@@ -26,6 +28,7 @@ const canonical = new URL(Astro.url.pathname, env.APP_URL).toString();
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <link rel="canonical" href={canonical} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
@@ -47,7 +50,7 @@ const canonical = new URL(Astro.url.pathname, env.APP_URL).toString();
         <main>
           <slot />
         </main>
-        <PortalBadge rootUrl={env.APP_URL} />
+        <PortalBadge rootUrl={new URL("/templates", env.APP_URL).toString()} />
       </div>
     </div>
   </body>

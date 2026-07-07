@@ -1,14 +1,29 @@
 ---
 const steps = [
-  { step: "1", title: "Sign up", body: "Create an account with email, magic link, or Google." },
-  { step: "2", title: "Create a project", body: "Everything is scoped to your account and org." },
-  { step: "3", title: "Upgrade when ready", body: "One click to Polar checkout, no surprises." },
+  {
+    step: "1",
+    title: "Drop your sheet",
+    body: "Upload your .xlsx or pick a Google Sheet. Extraction reads your products, prices, and the formulas behind your totals.",
+  },
+  {
+    step: "2",
+    title: "Confirm the draft",
+    body: "Review what Sheetstand found in plain English — line totals, tax, minimums — and correct anything before it goes live.",
+  },
+  {
+    step: "3",
+    title: "Publish the portal",
+    body: "Your buyers order from a link with live totals from your own rules. Every order lands back in your sheet.",
+  },
 ];
 ---
 
 <section id="how-it-works" class="bg-muted/40 py-20">
   <div class="mx-auto max-w-5xl px-6">
     <h2 class="text-center text-3xl font-bold tracking-tight">How it works</h2>
+    <p class="text-muted-foreground mx-auto mt-4 max-w-2xl text-center">
+      Your spreadsheet stays the admin surface. The portal is what your buyers see.
+    </p>
     <div class="mt-12 grid gap-8 md:grid-cols-3">
       {
         steps.map((item) => (

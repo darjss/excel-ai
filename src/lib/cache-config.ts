@@ -6,6 +6,8 @@ interface CacheRule {
 export const cacheRules: CacheRule[] = [
   { pattern: /^\/$/, sMaxAge: 300 },
   { pattern: /^\/pricing\/?$/, sMaxAge: 300 },
+  { pattern: /^\/templates\/?$/, sMaxAge: 300 },
+  { pattern: /^\/templates\/[^/]+\/?$/, sMaxAge: 300 },
   { pattern: /^\/portal\/[^/]+(\/catalog|\/order)?\/?$/, sMaxAge: 60 },
 ];
 

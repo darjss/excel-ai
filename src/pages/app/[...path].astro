@@ -5,6 +5,6 @@ import Layout from "@/layouts/Layout.astro";
 export const prerender = false;
 ---
 
-<Layout title="Dashboard — Sheetstand">
+<Layout title="Dashboard — Sheetstand" noindex={true}>
   <AppRoot client:only="solid-js" />
 </Layout>

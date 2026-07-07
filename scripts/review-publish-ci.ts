@@ -1,7 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { wholesaleConfig } from "../src/portal-config/fixtures/wholesale";
 
-const BASE = process.env.REVIEW_CI_BASE ?? "http://localhost:4321";
+const BASE = process.env.REVIEW_CI_BASE ?? "http://localhost:5321";
 
 let failures = 0;
 const check = (label: string, condition: boolean, detail?: string): void => {

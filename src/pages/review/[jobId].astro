@@ -8,6 +8,6 @@ const { jobId } = Astro.params;
 if (!jobId) return new Response("Missing job id", { status: 404 });
 ---
 
-<Layout title="Review your portal — Sheetstand">
+<Layout title="Review your portal — Sheetstand" noindex={true}>
   <ReviewLadder client:only="solid-js" jobId={jobId} />
 </Layout>

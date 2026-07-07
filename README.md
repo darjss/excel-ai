@@ -20,10 +20,10 @@ pnpm install                 # also generates worker-configuration.d.ts
 cp .dev.vars.example .dev.vars   # fill secrets
 pnpm db:migrate:local
 pnpm seed                    # admin@example.com / password123
-pnpm dev                     # http://localhost:4321
+pnpm dev                     # http://localhost:5321
 ```
 
-Verify: `curl localhost:4321/api/health`.
+Verify: `curl localhost:5321/api/health`.
 
 Deploy: create the D1 database and two KV namespaces, fill the ids in `wrangler.jsonc`, `wrangler secret put` each secret from `.dev.vars.example`, then `pnpm deploy`.
 

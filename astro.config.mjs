@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   output: "server",
+  server: { port: 5321 },
   adapter: cloudflare({
     platformProxy: { enabled: true },
     imageService: "passthrough",
