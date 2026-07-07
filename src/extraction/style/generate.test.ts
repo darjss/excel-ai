@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bakeryConfig } from "@/portal-config";
-import type { ChatFn, ChatResult } from "../agent/models";
+import { type ChatFn, type ChatResult, withTimeout } from "../agent/models";
 import type { ProgressEvent } from "../job/events";
 import { buildDefaultStyle } from "./default-style";
 import { applyStyle } from "./generate";
@@ -95,6 +95,16 @@ describe("applyStyle", () => {
       throw new Error("model unavailable");
     };
     const result = await applyStyle(bakeryConfig, { chat: throwing, model: "mock", emit: () => {} });
+    expect(result.style).toEqual(buildDefaultStyle(bakeryConfig));
+  });
+
+  it("falls back to the default style when the bounded style call times out", async () => {
+    const hanging: ChatFn = () => new Promise(() => {});
+    const result = await applyStyle(bakeryConfig, {
+      chat: withTimeout(hanging, 5),
+      model: "mock",
+      emit: () => {},
+    });
     expect(result.style).toEqual(buildDefaultStyle(bakeryConfig));
   });
 
