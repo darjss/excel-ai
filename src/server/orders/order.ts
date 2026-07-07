@@ -56,16 +56,29 @@ export interface BuildOrderContext {
 const productIndex = (config: PortalConfig): Map<string, Product> =>
   new Map(config.catalog.tables.flatMap((table) => table.products.map((p) => [p.id, p])));
 
+const sanitizeText = (value: string): string => value.replace(/[\r\n]+/g, " ").trim();
+
+const mergeLines = (
+  lines: SubmitOrderInput["lines"],
+): { productId: string; quantity: number }[] => {
+  const merged = new Map<string, number>();
+  for (const line of lines) {
+    merged.set(line.productId, (merged.get(line.productId) ?? 0) + line.quantity);
+  }
+  return [...merged.entries()].map(([productId, quantity]) => ({ productId, quantity }));
+};
+
 export const buildOrder = (
   config: PortalConfig,
   input: SubmitOrderInput,
   context: BuildOrderContext,
 ): Order => {
   const products = productIndex(config);
+  const mergedLines = mergeLines(input.lines);
   const cartLines: CartLineInput[] = [];
   const removed: SubmitOrderInput["lines"][number][] = [];
 
-  for (const line of input.lines) {
+  for (const line of mergedLines) {
     const product = products.get(line.productId);
     if (!product) {
       removed.push(line);
@@ -84,7 +97,7 @@ export const buildOrder = (
   const totals = computeTotals(config.rules, { lines: cartLines });
   const computedByProduct = new Map(totals.lines.map((line) => [line.productId, line]));
 
-  const lines: OrderLine[] = input.lines.map((line) => {
+  const lines: OrderLine[] = mergedLines.map((line) => {
     const computed = computedByProduct.get(line.productId);
     if (computed) {
       return {
@@ -111,7 +124,10 @@ export const buildOrder = (
   return {
     id: context.id,
     status: "received",
-    buyer: input.buyer,
+    buyer: {
+      name: sanitizeText(input.buyer.name),
+      contact: sanitizeText(input.buyer.contact),
+    },
     lines,
     subtotal: totals.subtotal,
     tax: totals.tax,

@@ -2,6 +2,7 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { PortalConfig } from "@/portal-config";
 import { api } from "@/lib/api";
+import { MAX_LINE_QUANTITY } from "@/lib/order-limits";
 import type { CartLineInput, Violation } from "@/server/orders/compute";
 import { computeTotals } from "@/server/orders/compute";
 import type { Order } from "@/server/orders/order";
@@ -26,7 +27,7 @@ export const OrderForm = (props: OrderFormProps) => {
   const quantityFor = (productId: string) => quantities[productId] ?? 0;
 
   const setQuantity = (productId: string, next: number) => {
-    setQuantities(productId, Math.max(0, Math.trunc(next)));
+    setQuantities(productId, Math.min(MAX_LINE_QUANTITY, Math.max(0, Math.trunc(next))));
   };
 
   const cartLines = createMemo<CartLineInput[]>(() =>

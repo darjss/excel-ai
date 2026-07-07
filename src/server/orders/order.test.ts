@@ -69,4 +69,33 @@ describe("buildOrder", () => {
     const without = buildOrder(bakeryConfig, submit([{ productId: "sourdough-classic", quantity: 4 }]), context);
     expect(withToken.total).toEqual(without.total);
   });
+
+  it("merges duplicate productIds so lines reconcile with the charged subtotal", () => {
+    const order = buildOrder(
+      bakeryConfig,
+      submit([
+        { productId: "sourdough-classic", quantity: 2 },
+        { productId: "sourdough-classic", quantity: 3 },
+      ]),
+      context,
+    );
+    expect(order.lines).toHaveLength(1);
+    expect(order.lines[0]?.quantity).toBe(5);
+    const linesSum = order.lines.reduce((sum, line) => sum + line.lineTotal.amount, 0);
+    expect(linesSum).toBe(order.subtotal.amount);
+  });
+
+  it("strips CR/LF from buyer name and contact", () => {
+    const order = buildOrder(
+      bakeryConfig,
+      {
+        buyer: { name: "Sam\r\nBcc: evil@x.com", contact: "sam@example.com\ninjected" },
+        lines: [{ productId: "sourdough-classic", quantity: 4 }],
+        buyerLinkToken: null,
+      },
+      context,
+    );
+    expect(order.buyer.name).toBe("Sam Bcc: evil@x.com");
+    expect(order.buyer.contact).toBe("sam@example.com injected");
+  });
 });
