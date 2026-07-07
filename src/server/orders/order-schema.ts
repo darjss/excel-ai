@@ -36,6 +36,8 @@ export const orderT = t.Object({
   violations: t.Array(violationT),
   currencyCode: t.String(),
   source: t.Union([t.Literal("portal"), t.Literal("manual")]),
+  buyerLinkToken: t.Optional(t.String()),
+  buyerLinkName: t.Optional(t.String()),
   createdAt: t.Integer(),
   updatedAt: t.Integer(),
 });

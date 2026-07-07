@@ -1,6 +1,8 @@
+APP_URL=http://localhost:4321
 BETTER_AUTH_SECRET=dev-only-secret-change-me
 POLAR_ACCESS_TOKEN=polar-sandbox-token-placeholder
 POLAR_WEBHOOK_SECRET=polar-webhook-secret-placeholder
+POLAR_SERVER=sandbox
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 POLAR_PRODUCT_ID_PRO=

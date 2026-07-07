@@ -40,18 +40,25 @@ export const buyerConfirmationEmail = (order: Order, business: Business): EmailC
   ].join("\n"),
 });
 
-export const supplierNotificationEmail = (order: Order, business: Business): EmailContent => ({
-  subject: `New order ${order.id} from ${order.buyer.name}`,
-  text: [
-    `${business.name} received a new order via the Portal.`,
-    ``,
-    `Order ${order.id}`,
-    `Buyer: ${order.buyer.name} (${order.buyer.contact})`,
-    lineText(order),
-    ``,
-    totalsText(order),
-  ].join("\n"),
-});
+export const supplierNotificationEmail = (order: Order, business: Business): EmailContent => {
+  const attributed = order.buyerLinkName !== undefined;
+  return {
+    subject: attributed
+      ? `New order ${order.id} from ${order.buyerLinkName} via their link`
+      : `New order ${order.id} from ${order.buyer.name}`,
+    text: [
+      attributed
+        ? `${business.name} received a new order from ${order.buyerLinkName} via their link.`
+        : `${business.name} received a new order via the Portal.`,
+      ``,
+      `Order ${order.id}`,
+      `Buyer: ${order.buyer.name} (${order.buyer.contact})`,
+      lineText(order),
+      ``,
+      totalsText(order),
+    ].join("\n"),
+  };
+};
 
 const statusLine: Record<"confirmed" | "cancelled", (business: Business) => string> = {
   confirmed: (business) => `${business.name} has confirmed your order.`,

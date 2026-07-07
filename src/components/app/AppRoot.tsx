@@ -5,6 +5,7 @@ import { queryClient } from "@/lib/query-client";
 import { AppLayout } from "./AppLayout";
 import { AdminPage } from "./routes/AdminPage";
 import { BillingPage } from "./routes/BillingPage";
+import { BuyerLinksPage } from "./routes/BuyerLinksPage";
 import { OrdersLanding } from "./routes/OrdersLanding";
 import { OrdersPage } from "./routes/OrdersPage";
 import { ProjectsPage } from "./routes/ProjectsPage";
@@ -15,6 +16,7 @@ export const AppRoot = () => (
   <QueryClientProvider client={queryClient}>
     <Router base="/app" root={AppLayout}>
       <Route path="/" component={ProjectsPage} />
+      <Route path="/buyer-links" component={BuyerLinksPage} />
       <Route path="/orders" component={OrdersLanding} />
       <Route path="/orders/:slug" component={OrdersPage} />
       <Route path="/review/:jobId" component={ReviewPage} />

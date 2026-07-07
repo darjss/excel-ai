@@ -64,10 +64,20 @@ describe("buildOrder", () => {
     expect(after.total).toEqual({ currencyCode: "USD", amount: 3600 });
   });
 
-  it("ignores the buyerLinkToken today", () => {
-    const withToken = buildOrder(bakeryConfig, submit([{ productId: "sourdough-classic", quantity: 4 }], "tok_123"), context);
-    const without = buildOrder(bakeryConfig, submit([{ productId: "sourdough-classic", quantity: 4 }]), context);
-    expect(withToken.total).toEqual(without.total);
+  it("leaves attribution unset when no link context is supplied", () => {
+    const order = buildOrder(bakeryConfig, submit([{ productId: "sourdough-classic", quantity: 4 }]), context);
+    expect(order.buyerLinkToken).toBeUndefined();
+    expect(order.buyerLinkName).toBeUndefined();
+  });
+
+  it("snapshots the link token and name when attribution context is supplied", () => {
+    const order = buildOrder(
+      bakeryConfig,
+      submit([{ productId: "sourdough-classic", quantity: 4 }], "tok_123"),
+      { ...context, attribution: { token: "tok_123", buyerName: "Cafe Rosa" } },
+    );
+    expect(order.buyerLinkToken).toBe("tok_123");
+    expect(order.buyerLinkName).toBe("Cafe Rosa");
   });
 
   it("merges duplicate productIds so lines reconcile with the charged subtotal", () => {

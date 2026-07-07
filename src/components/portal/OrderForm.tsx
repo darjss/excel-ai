@@ -9,16 +9,40 @@ import type { Order } from "@/server/orders/order";
 import { catalogProducts } from "./catalog-data";
 import { formatMoney } from "./money";
 
+const errorBodyMessage = (value: unknown): string | null => {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "error" in value &&
+    typeof value.error === "object" &&
+    value.error !== null &&
+    "message" in value.error &&
+    typeof value.error.message === "string"
+  ) {
+    return value.error.message;
+  }
+  return null;
+};
+
+export interface BuyerLinkAttribution {
+  token: string;
+  buyerName: string;
+  contact: string | null;
+}
+
 export interface OrderFormProps {
   config: PortalConfig;
   slug: string;
+  attribution?: BuyerLinkAttribution;
 }
 
 export const OrderForm = (props: OrderFormProps) => {
   const products = createMemo(() => catalogProducts(props.config));
   const [quantities, setQuantities] = createStore<Record<string, number>>({});
-  const [buyerName, setBuyerName] = createSignal("");
-  const [buyerContact, setBuyerContact] = createSignal("");
+  const nameLocked = () => props.attribution !== undefined;
+  const contactLocked = () => props.attribution?.contact != null;
+  const [buyerName, setBuyerName] = createSignal(props.attribution?.buyerName ?? "");
+  const [buyerContact, setBuyerContact] = createSignal(props.attribution?.contact ?? "");
   const [submitting, setSubmitting] = createSignal(false);
   const [submitError, setSubmitError] = createSignal<string | null>(null);
   const [serverViolations, setServerViolations] = createSignal<Violation[]>([]);
@@ -63,10 +87,15 @@ export const OrderForm = (props: OrderFormProps) => {
       const { data, error } = await api.portal({ slug: props.slug }).orders.post({
         buyer: { name: buyerName().trim(), contact: buyerContact().trim() },
         lines: cartLines().map((line) => ({ productId: line.productId, quantity: line.quantity })),
-        buyerLinkToken: null,
+        buyerLinkToken: props.attribution?.token ?? null,
       });
       if (error) {
-        setSubmitError("We couldn't submit your order. Please try again.");
+        const bodyMessage = errorBodyMessage(error.value);
+        setSubmitError(
+          (error.status as number) === 409 && bodyMessage
+            ? bodyMessage
+            : "We couldn't submit your order. Please try again.",
+        );
         return;
       }
       if (data.ok) {
@@ -168,22 +197,30 @@ export const OrderForm = (props: OrderFormProps) => {
         </Show>
 
         <div class="flex flex-col gap-3">
-          <label class="flex flex-col gap-1">
-            <span class="text-sm text-[var(--portal-foreground)]/70">Your name</span>
-            <input
-              type="text"
-              value={buyerName()}
-              onInput={(event) => setBuyerName(event.currentTarget.value)}
-              class="rounded-[var(--portal-radius)] border border-[var(--portal-foreground)]/20 bg-transparent px-3 py-2"
-            />
-          </label>
+          <Show when={nameLocked()}>
+            <p class="text-sm text-[var(--portal-foreground)]/70">
+              Ordering as <span class="font-medium text-[var(--portal-foreground)]">{buyerName()}</span>.
+            </p>
+          </Show>
+          <Show when={!nameLocked()}>
+            <label class="flex flex-col gap-1">
+              <span class="text-sm text-[var(--portal-foreground)]/70">Your name</span>
+              <input
+                type="text"
+                value={buyerName()}
+                onInput={(event) => setBuyerName(event.currentTarget.value)}
+                class="rounded-[var(--portal-radius)] border border-[var(--portal-foreground)]/20 bg-transparent px-3 py-2"
+              />
+            </label>
+          </Show>
           <label class="flex flex-col gap-1">
             <span class="text-sm text-[var(--portal-foreground)]/70">Email or phone</span>
             <input
               type="text"
               value={buyerContact()}
+              disabled={contactLocked()}
               onInput={(event) => setBuyerContact(event.currentTarget.value)}
-              class="rounded-[var(--portal-radius)] border border-[var(--portal-foreground)]/20 bg-transparent px-3 py-2"
+              class="rounded-[var(--portal-radius)] border border-[var(--portal-foreground)]/20 bg-transparent px-3 py-2 disabled:opacity-60"
             />
           </label>
         </div>

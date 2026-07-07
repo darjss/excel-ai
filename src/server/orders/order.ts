@@ -1,4 +1,5 @@
 import type { Money, PortalConfig, Product } from "@/portal-config";
+import type { OrderAttribution } from "./buyer-links";
 import { type CartLineInput, computeTotals, type Violation } from "./compute";
 
 export type OrderStatus = "received" | "confirmed" | "fulfilled" | "cancelled";
@@ -32,6 +33,8 @@ export interface Order {
   violations: Violation[];
   currencyCode: string;
   source: OrderSource;
+  buyerLinkToken?: string;
+  buyerLinkName?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -45,12 +48,14 @@ export interface SubmitOrderInput {
 export type SubmitOrderResult =
   | { kind: "ok"; order: Order }
   | { kind: "violations"; violations: Violation[] }
-  | { kind: "not-published" };
+  | { kind: "not-published" }
+  | { kind: "invalid-link" };
 
 export interface BuildOrderContext {
   id: string;
   now: number;
   source: OrderSource;
+  attribution?: OrderAttribution | null;
 }
 
 const productIndex = (config: PortalConfig): Map<string, Product> =>
@@ -136,6 +141,9 @@ export const buildOrder = (
     violations: totals.violations,
     currencyCode: totals.currencyCode,
     source: context.source,
+    ...(context.attribution
+      ? { buyerLinkToken: context.attribution.token, buyerLinkName: context.attribution.buyerName }
+      : {}),
     createdAt: context.now,
     updatedAt: context.now,
   };
