@@ -1,3 +1,4 @@
+import ClipboardList from "lucide-solid/icons/clipboard-list";
 import CreditCard from "lucide-solid/icons/credit-card";
 import FolderKanban from "lucide-solid/icons/folder-kanban";
 import Link2 from "lucide-solid/icons/link-2";
@@ -7,6 +8,7 @@ import ShieldCheck from "lucide-solid/icons/shield-check";
 export const navItems = [
   { href: "/app", label: "Projects", icon: FolderKanban },
   { href: "/app/buyer-links", label: "Buyer links", icon: Link2 },
+  { href: "/app/orders", label: "Orders", icon: ClipboardList },
   { href: "/app/billing", label: "Billing", icon: CreditCard },
   { href: "/app/settings", label: "Settings", icon: Settings },
   { href: "/app/admin", label: "Admin", icon: ShieldCheck },

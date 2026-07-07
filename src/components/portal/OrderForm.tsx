@@ -9,6 +9,21 @@ import type { Order } from "@/server/orders/order";
 import { catalogProducts } from "./catalog-data";
 import { formatMoney } from "./money";
 
+const errorBodyMessage = (value: unknown): string | null => {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "error" in value &&
+    typeof value.error === "object" &&
+    value.error !== null &&
+    "message" in value.error &&
+    typeof value.error.message === "string"
+  ) {
+    return value.error.message;
+  }
+  return null;
+};
+
 export interface BuyerLinkAttribution {
   token: string;
   buyerName: string;
@@ -75,9 +90,10 @@ export const OrderForm = (props: OrderFormProps) => {
         buyerLinkToken: props.attribution?.token ?? null,
       });
       if (error) {
+        const bodyMessage = errorBodyMessage(error.value);
         setSubmitError(
-          (error.status as number) === 409
-            ? "This order link is no longer active. Please ask your supplier for a fresh link."
+          (error.status as number) === 409 && bodyMessage
+            ? bodyMessage
             : "We couldn't submit your order. Please try again.",
         );
         return;

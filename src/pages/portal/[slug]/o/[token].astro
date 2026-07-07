@@ -26,7 +26,14 @@ const attribution =
     : null;
 ---
 
-<PortalLayout config={config} basePath={basePath} title={title} description={description}>
+<PortalLayout
+  config={config}
+  basePath={basePath}
+  title={title}
+  description={description}
+  noindex={true}
+  canonicalPath={basePath}
+>
   {
     attribution ? (
       <OrderForm client:load config={config} slug={slug} attribution={attribution} />

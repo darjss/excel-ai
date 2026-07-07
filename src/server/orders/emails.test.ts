@@ -3,6 +3,8 @@ import { bakeryConfig } from "@/portal-config";
 import {
   buyerConfirmationEmail,
   sendOrderEmails,
+  sendStatusChangeEmail,
+  statusChangeEmail,
   supplierNotificationEmail,
 } from "./emails";
 import { buildOrder } from "./order";
@@ -59,6 +61,25 @@ describe("order emails", () => {
     const logged = spy.mock.calls.map((args) => String(args[0])).join("\n");
     expect(logged).toContain("to=happy@example.com");
     expect(logged).toContain(`to=${bakeryConfig.business.contact.email}`);
+    spy.mockRestore();
+  });
+
+  it("builds a status-change email for confirmed and cancelled", () => {
+    const confirmed = statusChangeEmail(order, bakeryConfig.business, "confirmed");
+    expect(confirmed.subject).toContain("confirmed");
+    expect(confirmed.text).toContain("confirmed your order");
+    const cancelled = statusChangeEmail(order, bakeryConfig.business, "cancelled");
+    expect(cancelled.text).toContain("cancelled your order");
+  });
+
+  it("notifies the buyer of a status change only when the contact is an email", async () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    await sendStatusChangeEmail(order, bakeryConfig.business, "confirmed");
+    const phoneOrder = { ...order, buyer: { name: "Walk-in", contact: "+1 555 0000" } };
+    await sendStatusChangeEmail(phoneOrder, bakeryConfig.business, "cancelled");
+    const logged = spy.mock.calls.map((args) => String(args[0])).join("\n");
+    expect(logged).toContain("to=happy@example.com");
+    expect(logged).not.toContain("+1 555 0000");
     spy.mockRestore();
   });
 });

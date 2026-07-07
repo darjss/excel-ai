@@ -4,6 +4,12 @@ import { api, unwrap } from "@/lib/api";
 
 const buyerLinksKey = (slug: string) => ["buyer-links", slug];
 
+export const usePortalSlugs = () =>
+  useQuery(() => ({
+    queryKey: ["buyer-links", "portals"],
+    queryFn: async () => unwrap(await api["buyer-links"].portals.get()),
+  }));
+
 export const useBuyerLinks = (slug: Accessor<string>) =>
   useQuery(() => ({
     queryKey: buyerLinksKey(slug()),

@@ -2,13 +2,16 @@ import { Elysia, t } from "elysia";
 import { env } from "@/env";
 import { portalConfigFixtures } from "@/portal-config";
 import { submitBodyT } from "@/server/orders/submit-schema";
-import { createSupplierBuyerLink } from "@/server/portal/buyer-links";
+import { createSupplierBuyerLink, listSupplierBuyerLinks } from "@/server/portal/buyer-links";
 import { submitPortalOrder } from "@/server/portal/orders";
 import { publishPortalConfig } from "@/server/portal/store";
 import { ConflictError, NotFoundError } from "../errors";
 
 const BUYER_LINK_INVALID_MESSAGE =
   "This order link is no longer active. Please ask your supplier for a fresh link.";
+
+const SEED_BUYER_NAME = "Cafe Rosa";
+const SEED_BUYER_CONTACT = "orders@caferosa.example";
 
 const moneyT = t.Object({ currencyCode: t.String(), amount: t.Integer() });
 
@@ -69,7 +72,12 @@ export const portalRoute = new Elysia()
           throw new ConflictError(`Fixture ${slug} failed validation: ${result.error.message}`);
         }
         seeded.push(slug);
-        const link = await createSupplierBuyerLink(slug, "Cafe Rosa", "orders@caferosa.example");
+        const existing = await listSupplierBuyerLinks(slug);
+        const reusable = existing.find(
+          (link) => link.buyerName === SEED_BUYER_NAME && link.revokedAt == null,
+        );
+        const link =
+          reusable ?? (await createSupplierBuyerLink(slug, SEED_BUYER_NAME, SEED_BUYER_CONTACT));
         buyerLinks.push({ slug, token: link.token });
       }
       return { seeded, buyerLinks };

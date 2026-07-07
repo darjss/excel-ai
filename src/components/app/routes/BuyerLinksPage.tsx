@@ -1,4 +1,4 @@
-import { createSignal, For, Match, Show, Switch } from "solid-js";
+import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
 import { toast } from "solid-sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { queryErrorMessage } from "@/lib/api";
 import {
   useBuyerLinks,
   useCreateBuyerLink,
+  usePortalSlugs,
   useRevokeBuyerLink,
 } from "@/lib/queries/buyer-links";
 
@@ -16,6 +17,16 @@ export const BuyerLinksPage = () => {
   const [slug, setSlug] = createSignal("");
   const [buyerName, setBuyerName] = createSignal("");
   const [contact, setContact] = createSignal("");
+
+  const portals = usePortalSlugs();
+
+  createEffect(() => {
+    const list = portals.data;
+    if (!list || list.length === 0) return;
+    const [only] = list;
+    if (list.length === 1 && only) setSlug(only.slug);
+    else if (!list.some((portal) => portal.slug === slug())) setSlug("");
+  });
 
   const links = useBuyerLinks(slug);
   const createLink = useCreateBuyerLink(slug);
@@ -65,15 +76,39 @@ export const BuyerLinksPage = () => {
         fresh one in seconds.
       </p>
 
-      <label class="mt-6 block">
-        <span class="text-sm font-medium">Portal slug</span>
-        <Input
-          value={slug()}
-          onInput={(event) => setSlug(event.currentTarget.value)}
-          placeholder="your-portal-slug"
-          class="mt-1"
-        />
-      </label>
+      <div class="mt-6">
+        <span class="text-sm font-medium">Portal</span>
+        <Switch>
+          <Match when={portals.isPending}>
+            <p class="text-muted-foreground mt-1 text-sm">Loading portals…</p>
+          </Match>
+          <Match when={portals.isError}>
+            <p class="text-destructive mt-1 text-sm">{queryErrorMessage(portals.error)}</p>
+          </Match>
+          <Match when={portals.data?.length === 0}>
+            <p class="text-muted-foreground mt-1 text-sm">
+              Publish a portal to start creating buyer links.
+            </p>
+          </Match>
+          <Match when={portals.data && portals.data.length === 1}>
+            <p class="mt-1 text-sm font-medium">{slug()}</p>
+          </Match>
+          <Match when={portals.data && portals.data.length > 1}>
+            <select
+              value={slug()}
+              onChange={(event) => setSlug(event.currentTarget.value)}
+              class="border-input bg-background mt-1 h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="" disabled>
+                Select a portal…
+              </option>
+              <For each={portals.data}>
+                {(portal) => <option value={portal.slug}>{portal.slug}</option>}
+              </For>
+            </select>
+          </Match>
+        </Switch>
+      </div>
 
       <form onSubmit={create} class="mt-6 flex items-start gap-2">
         <div class="flex flex-1 flex-col gap-2">
