@@ -8,6 +8,7 @@ import { extractionRoute } from "./routes/extraction";
 import { healthRoute } from "./routes/health";
 import { portalRoute } from "./routes/portal";
 import { projectsRoute } from "./routes/projects";
+import { reviewRoute } from "./routes/review";
 import { templateExtractionRoute } from "./routes/template-extraction";
 
 export const app = new Elysia({ prefix: "/api", aot: false })
@@ -19,6 +20,7 @@ export const app = new Elysia({ prefix: "/api", aot: false })
   .use(adminRoute)
   .use(agentRoute)
   .use(extractionRoute)
+  .use(reviewRoute)
   .use(templateExtractionRoute)
   .use(portalRoute);
 
