@@ -10,6 +10,7 @@ import { isValidSlug, suggestSlug } from "@/review/slug";
 export interface PublishPanelProps {
   jobId: string;
   businessName: string;
+  openQuestions: number;
 }
 
 export const PublishPanel = (props: PublishPanelProps) => {
@@ -23,7 +24,10 @@ export const PublishPanel = (props: PublishPanelProps) => {
   );
 
   const ready = () =>
-    isValidSlug(slug()) && availability()?.available === true && !publish.isPending;
+    props.openQuestions === 0 &&
+    isValidSlug(slug()) &&
+    availability()?.available === true &&
+    !publish.isPending;
 
   const onPublish = (): void => {
     publish.mutate(slug(), {
@@ -72,6 +76,12 @@ export const PublishPanel = (props: PublishPanelProps) => {
             <Button disabled={!ready()} onClick={onPublish}>
               {publish.isPending ? "Publishing…" : "Publish to go live"}
             </Button>
+            <Show when={props.openQuestions > 0}>
+              <p class="text-amber-600 text-sm">
+                {props.openQuestions}{" "}
+                {props.openQuestions === 1 ? "question unanswered" : "questions unanswered"}
+              </p>
+            </Show>
           </>
         }
       >

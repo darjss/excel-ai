@@ -15,6 +15,7 @@ export interface ExtractionState {
   error: string | null;
   published: boolean;
   slug: string | null;
+  answeredFindingIds: string[];
 }
 
 export type ReviewResult =
@@ -28,6 +29,7 @@ const INITIAL_STATE: ExtractionState = {
   error: null,
   published: false,
   slug: null,
+  answeredFindingIds: [],
 };
 
 export class ExtractionAgent extends Agent<Cloudflare.Env, ExtractionState> {
@@ -78,7 +80,11 @@ export class ExtractionAgent extends Agent<Cloudflare.Env, ExtractionState> {
       return { ok: false, reason: "unknown_finding" };
     }
     const config = applyReviewAction(this.state.config, action);
-    this.setState({ ...this.state, config, published: false });
+    const answeredFindingIds =
+      action.type === "finding-decision"
+        ? [...new Set([...this.state.answeredFindingIds, action.findingId])]
+        : this.state.answeredFindingIds;
+    this.setState({ ...this.state, config, published: false, answeredFindingIds });
     return { ok: true, config };
   }
 

@@ -32,4 +32,41 @@ describe("isValidSlug", () => {
     expect(isValidSlug("a")).toBe(true);
     expect(isValidSlug("")).toBe(false);
   });
+
+  it("rejects the extended reserved infrastructure slugs", () => {
+    for (const reserved of [
+      "mail",
+      "root",
+      "staging",
+      "cdn",
+      "blog",
+      "help",
+      "support",
+      "status",
+      "docs",
+      "ns1",
+      "ns2",
+      "mx",
+      "smtp",
+      "imap",
+      "pop",
+      "ftp",
+      "dev",
+      "test",
+      "demo",
+    ]) {
+      expect(isValidSlug(reserved)).toBe(false);
+    }
+  });
+
+  it("rejects punycode-prefixed slugs", () => {
+    expect(isValidSlug("xn--nxasmq6b")).toBe(false);
+    expect(isValidSlug("xn--")).toBe(false);
+  });
+
+  it("rejects consecutive hyphens", () => {
+    expect(isValidSlug("north--gate")).toBe(false);
+    expect(isValidSlug("a--b")).toBe(false);
+    expect(isValidSlug("north-gate")).toBe(true);
+  });
 });

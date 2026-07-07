@@ -17,6 +17,17 @@ describe("summarizeFindings", () => {
     expect(summary.confirmed).toBe(3);
     expect(summary.questions).toBe(0);
   });
+
+  it("stops counting a question once it is explicitly rejected", () => {
+    const summary = summarizeFindings(wholesaleConfig.findings, new Set(["f-tax"]));
+    expect(summary.confirmed).toBe(2);
+    expect(summary.questions).toBe(0);
+  });
+
+  it("keeps counting a never-decided question as open", () => {
+    const summary = summarizeFindings(wholesaleConfig.findings, new Set(["f-pricelist"]));
+    expect(summary.questions).toBe(1);
+  });
 });
 
 describe("groupFindings", () => {

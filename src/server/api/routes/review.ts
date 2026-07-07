@@ -32,13 +32,15 @@ const requireOwnedDraft = async (jobId: string, userId: string) => {
 
 const draftView = (snapshot: ExtractionState, slug: string | null) => {
   if (snapshot.config === null) throw new NotFoundError("This draft has no extracted config yet.");
+  const answered = new Set(snapshot.answeredFindingIds);
   return {
     status: snapshot.status,
     published: snapshot.published,
     slug,
     config: deriveEffectiveConfig(snapshot.config),
     findings: snapshot.config.findings,
-    summary: summarizeFindings(snapshot.config.findings),
+    answeredFindingIds: snapshot.answeredFindingIds,
+    summary: summarizeFindings(snapshot.config.findings, answered),
   };
 };
 
@@ -133,7 +135,11 @@ export const reviewRoute = new Elysia({ prefix: "/review" })
   .post(
     "/:jobId/publish",
     async ({ user, params, body }) => {
-      await requireOwnedDraft(params.jobId, user.id);
+      const owned = await requireOwnedDraft(params.jobId, user.id);
+      if (owned.slug !== null) {
+        throw new ConflictError("This portal is already published; renaming a slug is not supported yet.");
+      }
+
       const slug = body.slug.trim().toLowerCase();
       if (!isValidSlug(slug)) {
         throw new AppError("validation", "That subdomain is not a valid slug.");
@@ -142,26 +148,44 @@ export const reviewRoute = new Elysia({ prefix: "/review" })
       const agent = await getAgent(params.jobId);
       const snapshot: ExtractionState = await agent.snapshot();
       if (snapshot.config === null) throw new NotFoundError("This draft has no extracted config.");
+
+      const openQuestions = summarizeFindings(
+        snapshot.config.findings,
+        new Set(snapshot.answeredFindingIds),
+      ).questions;
+      if (openQuestions > 0) {
+        throw new AppError("validation", "Answer every open question before publishing.", {
+          openQuestions,
+        });
+      }
+
       const effective = deriveEffectiveConfig(snapshot.config);
 
+      const ownerScope = and(
+        eq(portalDraft.jobId, params.jobId),
+        eq(portalDraft.userId, user.id),
+      );
+      const releaseSlug = () => db.update(portalDraft).set({ slug: null }).where(ownerScope);
+
       try {
-        await db
-          .update(portalDraft)
-          .set({ slug })
-          .where(and(eq(portalDraft.jobId, params.jobId), eq(portalDraft.userId, user.id)));
+        await db.update(portalDraft).set({ slug }).where(ownerScope);
       } catch {
         throw new ConflictError("That subdomain is already taken.");
       }
 
-      const published = await publishPortalConfig(slug, effective);
+      let published: Awaited<ReturnType<typeof publishPortalConfig>>;
+      try {
+        published = await publishPortalConfig(slug, effective);
+      } catch (error) {
+        await releaseSlug();
+        throw error;
+      }
       if (!published.ok) {
+        await releaseSlug();
         throw new AppError("validation", published.error.message, published.error.details);
       }
 
-      await db
-        .update(portalDraft)
-        .set({ publishedAt: new Date() })
-        .where(and(eq(portalDraft.jobId, params.jobId), eq(portalDraft.userId, user.id)));
+      await db.update(portalDraft).set({ publishedAt: new Date() }).where(ownerScope);
       await agent.markPublished(slug);
       await purgePortalCache(slug);
 

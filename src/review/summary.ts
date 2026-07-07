@@ -16,12 +16,18 @@ const GROUP_ORDER: FindingGroupKind[] = ["rule", "product", "category", "general
 
 const groupKind = (finding: Finding): FindingGroupKind => finding.targetRef?.kind ?? "general";
 
-export const isOpenQuestion = (finding: Finding): boolean =>
-  finding.question !== undefined && !finding.accepted;
+export const isOpenQuestion = (
+  finding: Finding,
+  answeredFindingIds: ReadonlySet<string> = new Set(),
+): boolean =>
+  finding.question !== undefined && !finding.accepted && !answeredFindingIds.has(finding.id);
 
-export const summarizeFindings = (findings: readonly Finding[]): FindingsSummary => ({
+export const summarizeFindings = (
+  findings: readonly Finding[],
+  answeredFindingIds: ReadonlySet<string> = new Set(),
+): FindingsSummary => ({
   confirmed: findings.filter((finding) => finding.accepted).length,
-  questions: findings.filter(isOpenQuestion).length,
+  questions: findings.filter((finding) => isOpenQuestion(finding, answeredFindingIds)).length,
 });
 
 export const groupFindingList = (findings: readonly Finding[]): FindingGroup[] =>

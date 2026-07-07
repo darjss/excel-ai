@@ -56,7 +56,11 @@ export const ReviewPage = () => {
                   pending={decide.isPending}
                   onDecide={onDecide}
                 />
-                <PublishPanel jobId={jobId()} businessName={data().config.business.name} />
+                <PublishPanel
+                  jobId={jobId()}
+                  businessName={data().config.business.name}
+                  openQuestions={data().summary.questions}
+                />
               </div>
               <div class="lg:sticky lg:top-6 lg:self-start">
                 <PortalPreviewFrame config={data().config} />
