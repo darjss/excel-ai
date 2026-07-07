@@ -99,7 +99,7 @@ export const bakeryConfig: PortalConfig = {
       source: { sheet: "Menu", range: "B15", formula: '=IF(SUM(D2:D12)<20,"Below minimum","OK")' },
       scope: { target: "all" },
       basis: "subtotal",
-      threshold: 2000,
+      threshold: { currencyCode: "USD", amount: 2000 },
     },
   ],
   validations: [
@@ -118,7 +118,7 @@ export const bakeryConfig: PortalConfig = {
     },
     {
       id: "f-min-order",
-      targetRef: "min-order",
+      targetRef: { kind: "rule", id: "min-order" },
       confidence: "medium",
       plainEnglish: "A $20 order minimum appears to apply to the whole order.",
       question: "Does the $20 minimum apply to every order, or only wholesale?",

@@ -4,21 +4,26 @@ import type { PortalConfig } from "./types";
 
 export type ParseErrorCode = "validation" | "repair_exhausted";
 
+export interface ParseErrorDetail {
+  path: string;
+  message: string;
+}
+
 export interface ParseError {
   code: ParseErrorCode;
   message: string;
-  issues: readonly string[];
+  details: readonly ParseErrorDetail[];
 }
 
 export type ParseResult = { ok: true; data: PortalConfig } | { ok: false; error: ParseError };
 
-export type RepairFn = (previous: unknown, issues: readonly string[]) => Promise<unknown>;
+export type RepairFn = (
+  previous: unknown,
+  details: readonly ParseErrorDetail[],
+) => Promise<unknown>;
 
-const formatIssues = (issues: readonly v.BaseIssue<unknown>[]): string[] =>
-  issues.map((issue) => {
-    const path = v.getDotPath(issue);
-    return path ? `${path}: ${issue.message}` : issue.message;
-  });
+const formatDetails = (issues: readonly v.BaseIssue<unknown>[]): ParseErrorDetail[] =>
+  issues.map((issue) => ({ path: v.getDotPath(issue) ?? "", message: issue.message }));
 
 export const parsePortalConfig = (input: unknown): ParseResult => {
   const result = v.safeParse(portalConfigSchema, input);
@@ -28,7 +33,7 @@ export const parsePortalConfig = (input: unknown): ParseResult => {
     error: {
       code: "validation",
       message: "PortalConfig failed validation",
-      issues: formatIssues(result.issues),
+      details: formatDetails(result.issues),
     },
   };
 };
@@ -42,7 +47,7 @@ export const repairAndParse = async (
   let last = parsePortalConfig(candidate);
   let attempts = 0;
   while (!last.ok && attempts < maxAttempts) {
-    candidate = await repair(candidate, last.error.issues);
+    candidate = await repair(candidate, last.error.details);
     last = parsePortalConfig(candidate);
     attempts += 1;
   }
@@ -52,7 +57,7 @@ export const repairAndParse = async (
     error: {
       code: "repair_exhausted",
       message: `PortalConfig still invalid after ${attempts} repair attempt(s)`,
-      issues: last.error.issues,
+      details: last.error.details,
     },
   };
 };

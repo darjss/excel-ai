@@ -12,19 +12,19 @@ export const fieldType = v.picklist([
   "boolean",
 ]);
 
-export const productFieldSchema = v.object({
+export const productFieldSchema = v.strictObject({
   key: nonEmptyText,
   label: nonEmptyText,
   type: fieldType,
   source: v.optional(sourceRefSchema),
 });
 
-export const attributeSchema = v.object({
+export const attributeSchema = v.strictObject({
   fieldKey: nonEmptyText,
   value: v.union([v.string(), v.number(), v.boolean()]),
 });
 
-export const productSchema = v.object({
+export const productSchema = v.strictObject({
   id: nonEmptyText,
   name: nonEmptyText,
   categoryId: v.optional(nonEmptyText),
@@ -35,12 +35,12 @@ export const productSchema = v.object({
   source: v.optional(sourceRefSchema),
 });
 
-export const categorySchema = v.object({
+export const categorySchema = v.strictObject({
   id: nonEmptyText,
   name: nonEmptyText,
 });
 
-export const catalogTableSchema = v.object({
+export const catalogTableSchema = v.strictObject({
   id: nonEmptyText,
   name: nonEmptyText,
   fields: v.array(productFieldSchema),
@@ -48,7 +48,7 @@ export const catalogTableSchema = v.object({
   source: v.optional(sourceRefSchema),
 });
 
-export const catalogSchema = v.object({
+export const catalogSchema = v.strictObject({
   categories: v.array(categorySchema),
   tables: v.array(catalogTableSchema),
 });

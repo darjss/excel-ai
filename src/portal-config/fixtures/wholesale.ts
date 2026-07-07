@@ -166,14 +166,14 @@ export const wholesaleConfig: PortalConfig = {
     },
     {
       id: "f-tier-flour",
-      targetRef: "tier-flour",
+      targetRef: { kind: "rule", id: "tier-flour" },
       confidence: "high",
       plainEnglish: "Detected quantity-break pricing on Tipo 00 Flour at 10 and 25 cases.",
       accepted: true,
     },
     {
       id: "f-tax",
-      targetRef: "sales-tax",
+      targetRef: { kind: "rule", id: "sales-tax" },
       confidence: "medium",
       plainEnglish: "An 8% tax line was found on the order sheet.",
       question: "Is 8% the correct sales-tax rate for all delivery regions?",

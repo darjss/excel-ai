@@ -1,5 +1,15 @@
 import * as v from "valibot";
 import { catalogSchema } from "./catalog";
+import {
+  findingRefsValid,
+  isViableSkeleton,
+  productCategoryRefsValid,
+  ruleScopeRefsValid,
+  uniformCurrency,
+  uniqueFindingIds,
+  uniqueProductIds,
+  uniqueRuleIds,
+} from "./integrity";
 import { businessSchema, findingsSchema } from "./meta";
 import { ruleSchema } from "./rules";
 import { styleSchema } from "./style";
@@ -12,7 +22,7 @@ const sharedEntries = {
   findings: findingsSchema,
 };
 
-export const orderPortalConfigSchema = v.object({
+export const orderPortalConfigSchema = v.strictObject({
   ...sharedEntries,
   templateFamily: v.literal("order-portal"),
   catalog: catalogSchema,
@@ -22,14 +32,17 @@ export const orderPortalConfigSchema = v.object({
 
 const familyVariant = v.variant("templateFamily", [orderPortalConfigSchema]);
 
-const productCount = (config: v.InferOutput<typeof familyVariant>) =>
-  config.catalog.tables.reduce((total, table) => total + table.products.length, 0);
-
-const hasConfidentFinding = (config: v.InferOutput<typeof familyVariant>) =>
-  config.findings.some((finding) => finding.confidence !== "low");
-
 export const portalConfigSchema = v.pipe(
   familyVariant,
-  v.check((config) => productCount(config) > 0, "Catalog must contain at least one product"),
-  v.check(hasConfidentFinding, "Extraction must produce at least one non-low-confidence finding"),
+  v.check(uniqueProductIds, "Product ids must be unique"),
+  v.check(uniqueRuleIds, "Rule ids must be unique"),
+  v.check(uniqueFindingIds, "Finding ids must be unique"),
+  v.check(uniformCurrency, "All prices must share a single currency"),
+  v.check(productCategoryRefsValid, "Every product.categoryId must reference a known category"),
+  v.check(ruleScopeRefsValid, "Every rule scope must reference a known product or category"),
+  v.check(findingRefsValid, "Every finding.targetRef must reference a known entity"),
+  v.check(
+    isViableSkeleton,
+    "Config must contain at least one rule, or products with a non-low-confidence finding",
+  ),
 );

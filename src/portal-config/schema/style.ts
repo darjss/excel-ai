@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import { hexColor, nonEmptyText } from "./primitives";
 
-export const paletteSchema = v.object({
+export const paletteSchema = v.strictObject({
   primary: hexColor,
   accent: hexColor,
   background: hexColor,
@@ -18,13 +18,13 @@ export const fontPairing = v.picklist([
   "dm-serif-dm-sans",
 ]);
 
-export const themeSchema = v.object({
+export const themeSchema = v.strictObject({
   palette: paletteSchema,
   radius,
   fontPairing,
 });
 
-export const copySchema = v.object({
+export const copySchema = v.strictObject({
   heroLine: nonEmptyText,
   about: nonEmptyText,
   orderCtaLabel: nonEmptyText,
@@ -40,10 +40,16 @@ export const section = v.picklist([
   "payment-instructions",
 ]);
 
-export const styleSchema = v.object({
+const sectionsUnique = (sections: Section[]): boolean => new Set(sections).size === sections.length;
+
+export const styleSchema = v.strictObject({
   theme: themeSchema,
   copy: copySchema,
-  sections: v.pipe(v.array(section), v.minLength(1)),
+  sections: v.pipe(
+    v.array(section),
+    v.minLength(1),
+    v.check(sectionsUnique, "Sections must not contain duplicate entries"),
+  ),
 });
 
 export type Palette = v.InferOutput<typeof paletteSchema>;

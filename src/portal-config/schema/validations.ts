@@ -7,18 +7,18 @@ const validationBase = {
   source: v.optional(sourceRefSchema),
 };
 
-export const requiredValidationSchema = v.object({
+export const requiredValidationSchema = v.strictObject({
   ...validationBase,
   kind: v.literal("required"),
 });
 
-export const enumValidationSchema = v.object({
+export const enumValidationSchema = v.strictObject({
   ...validationBase,
   kind: v.literal("enum"),
   allowed: v.pipe(v.array(nonEmptyText), v.minLength(1)),
 });
 
-export const lengthValidationSchema = v.object({
+export const lengthValidationSchema = v.strictObject({
   ...validationBase,
   kind: v.literal("length"),
   min: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
