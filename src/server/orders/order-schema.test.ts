@@ -64,4 +64,10 @@ describe("order API schemas (app.handle)", () => {
     expect((await app.handle(new Request("http://localhost/list?take=51"))).status).toBe(422);
     expect((await app.handle(new Request("http://localhost/list?take=25&cursor=1000:o1"))).status).toBe(200);
   });
+
+  it("rejects a malformed pagination cursor", async () => {
+    expect((await app.handle(new Request("http://localhost/list?cursor=not-a-cursor"))).status).toBe(422);
+    expect((await app.handle(new Request("http://localhost/list?cursor=1000%3A"))).status).toBe(422);
+    expect((await app.handle(new Request("http://localhost/list?cursor=1000%3Ao1"))).status).toBe(200);
+  });
 });

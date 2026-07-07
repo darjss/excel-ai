@@ -16,5 +16,8 @@ const allowedTransitions: Record<OrderStatus, readonly OrderStatus[]> = {
 
 export const nextStatuses = (from: OrderStatus): readonly OrderStatus[] => allowedTransitions[from];
 
+export const isTerminalStatus = (status: OrderStatus): boolean =>
+  status === "fulfilled" || status === "cancelled";
+
 export const canTransition = (from: OrderStatus, to: OrderStatus): boolean =>
   allowedTransitions[from].includes(to);

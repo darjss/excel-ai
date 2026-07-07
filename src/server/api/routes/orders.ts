@@ -1,6 +1,4 @@
 import { Elysia } from "elysia";
-import type { OrderMutationResult } from "@/server/agents/supplier";
-import type { Order } from "@/server/orders/order";
 import {
   editLinesBodyT,
   listOrdersQueryT,
@@ -18,21 +16,9 @@ import {
   updateSupplierOrderStatus,
 } from "@/server/portal/orders";
 import { assertSlugOwnership } from "@/server/portal/ownership";
-import { ConflictError, NotFoundError } from "../errors";
+import { NotFoundError } from "../errors";
 import { authPlugin } from "../plugins/auth";
-
-const resolveMutation = (result: OrderMutationResult): Order => {
-  switch (result.kind) {
-    case "ok":
-      return result.order;
-    case "not-found":
-      throw new NotFoundError("Order not found");
-    case "not-published":
-      throw new NotFoundError("Portal not found");
-    case "invalid-transition":
-      throw new ConflictError(`Cannot move order from ${result.from} to ${result.to}`);
-  }
-};
+import { resolveMutation } from "./order-mutation";
 
 export const ordersRoute = new Elysia()
   .use(authPlugin)

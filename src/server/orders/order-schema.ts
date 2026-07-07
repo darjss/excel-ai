@@ -1,6 +1,6 @@
 import { t } from "elysia";
 import { MAX_LINE_QUANTITY } from "@/lib/order-limits";
-import { MAX_ORDERS_PAGE_SIZE } from "./pagination";
+import { CURSOR_PATTERN, MAX_ORDERS_PAGE_SIZE } from "./pagination";
 
 const moneyT = t.Object({ currencyCode: t.String(), amount: t.Integer() });
 
@@ -46,7 +46,7 @@ export const ordersPageT = t.Object({
 });
 
 export const listOrdersQueryT = t.Object({
-  cursor: t.Optional(t.String()),
+  cursor: t.Optional(t.String({ pattern: CURSOR_PATTERN })),
   take: t.Optional(t.Integer({ minimum: 1, maximum: MAX_ORDERS_PAGE_SIZE })),
 });
 

@@ -2,6 +2,10 @@ import type { Order } from "./order";
 
 export const MAX_ORDERS_PAGE_SIZE = 50;
 
+export const CURSOR_PATTERN = "^[0-9]+:.+$";
+
+export const isValidCursor = (cursor: string): boolean => new RegExp(CURSOR_PATTERN).test(cursor);
+
 export interface OrdersPageParams {
   cursor?: string | null;
   take?: number;

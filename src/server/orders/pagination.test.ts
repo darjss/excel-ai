@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Order } from "./order";
-import { MAX_ORDERS_PAGE_SIZE, paginateOrders } from "./pagination";
+import { isValidCursor, MAX_ORDERS_PAGE_SIZE, paginateOrders } from "./pagination";
 
 const money = { currencyCode: "USD", amount: 0 };
 
@@ -57,5 +57,21 @@ describe("paginateOrders", () => {
   it("reports no next cursor on the final page", () => {
     const page = paginateOrders(orders.slice(0, 10), { take: 25 });
     expect(page.nextCursor).toBeNull();
+  });
+});
+
+describe("isValidCursor", () => {
+  it("accepts a well-formed createdAt:id cursor", () => {
+    expect(isValidCursor("1700000000000:o1")).toBe(true);
+    expect(isValidCursor("0:a")).toBe(true);
+  });
+
+  it("rejects malformed cursors", () => {
+    expect(isValidCursor("")).toBe(false);
+    expect(isValidCursor("abc")).toBe(false);
+    expect(isValidCursor("1000")).toBe(false);
+    expect(isValidCursor("1000:")).toBe(false);
+    expect(isValidCursor(":o1")).toBe(false);
+    expect(isValidCursor("12ab:o1")).toBe(false);
   });
 });

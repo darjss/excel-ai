@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OrderStatus } from "./order";
-import { canTransition, nextStatuses, ORDER_STATUSES } from "./status";
+import { canTransition, isTerminalStatus, nextStatuses, ORDER_STATUSES } from "./status";
 
 const valid = new Set<`${OrderStatus}->${OrderStatus}`>([
   "received->confirmed",
@@ -34,5 +34,12 @@ describe("order lifecycle state machine", () => {
     expect(canTransition("confirmed", "cancelled")).toBe(true);
     expect(canTransition("fulfilled", "cancelled")).toBe(false);
     expect(canTransition("cancelled", "cancelled")).toBe(false);
+  });
+
+  it("marks fulfilled and cancelled as terminal and the rest as open", () => {
+    expect(isTerminalStatus("fulfilled")).toBe(true);
+    expect(isTerminalStatus("cancelled")).toBe(true);
+    expect(isTerminalStatus("received")).toBe(false);
+    expect(isTerminalStatus("confirmed")).toBe(false);
   });
 });

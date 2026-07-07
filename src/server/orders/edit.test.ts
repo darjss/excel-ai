@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PortalConfig } from "@/portal-config";
 import { bakeryConfig } from "@/portal-config";
-import { buildManualOrder, editOrderLines } from "./edit";
+import { buildManualOrder, editOrderLines, unknownProductIds } from "./edit";
 import { buildOrder, type SubmitOrderInput } from "./order";
 
 const buyer = { name: "Sam Buyer", contact: "sam@example.com" };
@@ -92,6 +92,80 @@ describe("editOrderLines repricing semantics", () => {
     expect(edited.id).toBe("order-1");
     expect(edited.createdAt).toBe(original.createdAt);
     expect(edited.updatedAt).toBe(1_700_000_200_000);
+  });
+});
+
+const withTaxAndDrift = (): PortalConfig => {
+  const drifted = structuredClone(bakeryConfig);
+  for (const product of drifted.catalog.tables[0]?.products ?? []) {
+    if (product.id === "sourdough-classic") product.unitPrice = { currencyCode: "USD", amount: 900 };
+    if (product.id === "butter-croissant") product.unitPrice = { currencyCode: "USD", amount: 500 };
+  }
+  drifted.rules.push({
+    id: "tax-breads",
+    type: "tax",
+    plainEnglish: "10% tax on breads.",
+    source: { sheet: "Menu", range: "B14" },
+    scope: { target: "category", categoryId: "breads" },
+    ratePercent: 10,
+    inclusive: false,
+  });
+  return drifted;
+};
+
+describe("editOrderLines mixed-era tax basis", () => {
+  it("taxes the mixed snapshot/current lines, not the all-current repriced order", () => {
+    const mixed = buildOrder(
+      bakeryConfig,
+      submit([
+        { productId: "sourdough-classic", quantity: 4 },
+        { productId: "butter-croissant", quantity: 2 },
+      ]),
+      { id: "order-tax", now: 1_700_000_000_000, source: "portal" },
+    );
+
+    const edited = editOrderLines(
+      mixed,
+      withTaxAndDrift(),
+      [
+        { productId: "sourdough-classic", quantity: 4 },
+        { productId: "butter-croissant", quantity: 3 },
+      ],
+      1_700_000_100_000,
+    );
+
+    const sourdough = edited.lines.find((line) => line.productId === "sourdough-classic");
+    const croissant = edited.lines.find((line) => line.productId === "butter-croissant");
+    expect(sourdough?.lineTotal.amount).toBe(2600);
+    expect(croissant?.lineTotal.amount).toBe(1500);
+
+    const subtotal = edited.lines.reduce((sum, line) => sum + line.lineTotal.amount, 0);
+    expect(edited.subtotal.amount).toBe(subtotal);
+    expect(subtotal).toBe(4100);
+    expect(edited.tax?.amount).toBe(260);
+    expect(edited.total.amount).toBe(4360);
+  });
+});
+
+describe("unknownProductIds", () => {
+  it("returns an empty list when every line maps to a catalog product", () => {
+    expect(
+      unknownProductIds(bakeryConfig, [
+        { productId: "sourdough-classic", quantity: 1 },
+        { productId: "rye-loaf", quantity: 2 },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("returns the deduplicated offending ids for unknown products", () => {
+    expect(
+      unknownProductIds(bakeryConfig, [
+        { productId: "sourdough-classic", quantity: 1 },
+        { productId: "ghost-item", quantity: 2 },
+        { productId: "ghost-item", quantity: 1 },
+        { productId: "phantom", quantity: 1 },
+      ]),
+    ).toEqual(["ghost-item", "phantom"]);
   });
 });
 
