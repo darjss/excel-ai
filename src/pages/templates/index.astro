@@ -8,8 +8,12 @@ import { templatePath } from "@/marketing/seo";
 import { templates } from "@/marketing/templates";
 
 const title = "Free order form templates — Excel & Google Sheets";
-const description =
-  "Working order-sheet templates for bakeries, wholesalers, farms, roasters, florists, butchers, produce, and catering. Download free or turn one into a live order portal.";
+const niches = templates.map((template) => template.niche);
+const nicheList =
+  niches.length > 1
+    ? `${niches.slice(0, -1).join(", ")}, and ${niches.at(-1) ?? ""}`
+    : (niches[0] ?? "");
+const description = `Working order-sheet templates for ${nicheList}. Download free or turn one into a live order portal.`;
 
 const itemList = {
   "@context": "https://schema.org",

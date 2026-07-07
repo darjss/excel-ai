@@ -57,3 +57,31 @@ describe("order-sheet templates extract cleanly", () => {
     });
   }
 });
+
+describe("subtotal SUM is arithmetically sound", () => {
+  const spec = templates[0];
+  if (!spec) throw new Error("expected at least one template");
+  const facts = parseWorkbook(buildTemplateWorkbook(spec));
+  const sheet = facts.sheets[0];
+  const FIRST_ITEM_ROW = 8;
+
+  it("sums exactly the item rows to the expected subtotal", () => {
+    const subtotal = (sheet?.formulas ?? []).find((formula) =>
+      /^SUM\(E\d+:E\d+\)$/.test(formula.formula),
+    );
+    expect(subtotal).toBeDefined();
+
+    const range = subtotal?.formula.match(/^SUM\(E(\d+):E(\d+)\)$/);
+    expect(range).not.toBeNull();
+    const start = Number(range?.[1]);
+    const end = Number(range?.[2]);
+    expect(start).toBe(FIRST_ITEM_ROW);
+    expect(end).toBe(FIRST_ITEM_ROW + spec.lineItems.length - 1);
+
+    const expected = spec.lineItems.reduce(
+      (sum, item) => sum + item.unitPrice * item.sampleQuantity,
+      0,
+    );
+    expect(subtotal?.value).toBeCloseTo(expected, 6);
+  });
+});

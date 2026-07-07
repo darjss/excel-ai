@@ -43,7 +43,7 @@ const canonical = new URL(canonicalPath ?? Astro.url.pathname, env.APP_URL).toSt
     <meta name="twitter:description" content={description} />
     {
       jsonLd.map((entry) => (
-        <script is:inline type="application/ld+json" set:html={JSON.stringify(entry)} />
+        <script is:inline type="application/ld+json" set:html={JSON.stringify(entry).replaceAll("</", "<\\/")} />
       ))
     }
   </head>

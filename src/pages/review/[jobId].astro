@@ -8,7 +8,7 @@ const { jobId } = Astro.params;
 if (!jobId) return new Response("Not found", { status: 404 });
 ---
 
-<Layout title="Portal preview — Sheetstand">
+<Layout title="Portal preview — Sheetstand" noindex={true}>
   <main>
     <ReviewPreview client:only="solid-js" jobId={jobId} />
   </main>

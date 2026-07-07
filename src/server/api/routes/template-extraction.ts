@@ -7,6 +7,8 @@ import type { ExtractionAgent } from "@/server/agents/extraction";
 import { AppError } from "../errors";
 import { consumeExtractionToken } from "../rate-limit";
 
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
 const getAgent = (id: string) =>
   getAgentByName<Cloudflare.Env, ExtractionAgent>(env.EXTRACTION, id);
 
@@ -37,9 +39,14 @@ export const templateExtractionRoute = new Elysia({ prefix: "/extraction" }).pos
       throw new AppError("internal", "Template file could not be loaded.");
     }
 
+    const buffer = await asset.arrayBuffer();
+    if (buffer.byteLength > MAX_UPLOAD_BYTES) {
+      throw new AppError("payload_too_large", "Template file exceeds the 10MB limit.");
+    }
+
     const jobId = createId();
     const key = `uploads/${jobId}/${body.slug}.xlsx`;
-    await env.UPLOADS.put(key, await asset.arrayBuffer());
+    await env.UPLOADS.put(key, buffer);
     const agent = await getAgent(jobId);
     await agent.start(key);
     return status(202, { jobId });
