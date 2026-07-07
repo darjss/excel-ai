@@ -4,6 +4,7 @@ export type ErrorCode =
   | "unauthorized"
   | "forbidden"
   | "not_found"
+  | "payment_required"
   | "validation"
   | "conflict"
   | "payload_too_large"
@@ -22,6 +23,7 @@ const statusByCode: Record<ErrorCode, number> = {
   unauthorized: 401,
   forbidden: 403,
   not_found: 404,
+  payment_required: 402,
   validation: 422,
   conflict: 409,
   payload_too_large: 413,
@@ -66,6 +68,12 @@ export class NotFoundError extends AppError {
 export class ConflictError extends AppError {
   constructor(message = "Resource already exists") {
     super("conflict", message);
+  }
+}
+
+export class PaymentRequiredError extends AppError {
+  constructor(message = "A paid plan is required", details?: unknown) {
+    super("payment_required", message, details);
   }
 }
 

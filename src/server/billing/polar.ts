@@ -1,22 +1,41 @@
 import { polar, portal, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { env } from "@/env";
+import { isPlanSlug } from "@/lib/plans";
 import { NotFoundError } from "@/server/api/errors";
-import type { PaymentProvider } from "./provider";
+import {
+  type PolarSubscriptionPayload,
+  type ProductPlanMap,
+  subscriptionSnapshotFromPolar,
+} from "./polar-webhook";
+import type { PaymentProvider, SubscriptionStatus } from "./provider";
+import { upsertSubscription } from "./subscription";
 
 const client = new Polar({
   accessToken: env.POLAR_ACCESS_TOKEN,
   server: env.POLAR_SERVER,
 });
 
-const productIdBySlug: Record<string, string | undefined> = {
+const productIdBySlug: ProductPlanMap = {
+  standard: env.POLAR_PRODUCT_ID_STANDARD,
   pro: env.POLAR_PRODUCT_ID_PRO,
 };
 
+const polarConfigured = !env.POLAR_ACCESS_TOKEN.includes("placeholder");
+
 const productIdFor = (planSlug: string) => {
+  if (!isPlanSlug(planSlug)) throw new NotFoundError(`Unknown plan "${planSlug}"`);
   const productId = productIdBySlug[planSlug];
   if (!productId) throw new NotFoundError(`No Polar product configured for plan "${planSlug}"`);
   return productId;
+};
+
+const applySubscriptionEvent = async (
+  data: PolarSubscriptionPayload,
+  statusOverride?: SubscriptionStatus,
+): Promise<void> => {
+  const snapshot = subscriptionSnapshotFromPolar(data, productIdBySlug, statusOverride);
+  if (snapshot) await upsertSubscription(snapshot);
 };
 
 export const polarProvider: PaymentProvider = {
@@ -31,35 +50,17 @@ export const polarProvider: PaymentProvider = {
     return { url: session.url };
   },
 
-  getCustomerState: async (userId) => {
-    try {
-      const state = await client.customers.getStateExternal({ externalId: userId });
-      const active = state.activeSubscriptions[0];
-      const slug = Object.entries(productIdBySlug).find(
-        ([, productId]) => productId === active?.productId,
-      )?.[0];
-      return {
-        activePlanSlug: slug ?? null,
-        subscriptionStatus: active ? "active" : "none",
-        portalConfigured: true,
-      };
-    } catch (error) {
-      console.warn(`[polar] failed to load customer state for ${userId}`, error);
-      return { activePlanSlug: null, subscriptionStatus: "none", portalConfigured: false };
-    }
-  },
-
   authPlugin: polar({
     client,
-    createCustomerOnSignUp: true,
+    createCustomerOnSignUp: polarConfigured,
     use: [
       portal(),
       webhooks({
         secret: env.POLAR_WEBHOOK_SECRET,
-        // TODO: react to billing events (grant/revoke entitlements) here
-        onCustomerStateChanged: async (payload) => {
-          console.log(`[polar] customer state changed: ${payload.data.id}`);
-        },
+        onSubscriptionActive: (payload) => applySubscriptionEvent(payload.data),
+        onSubscriptionUpdated: (payload) => applySubscriptionEvent(payload.data),
+        onSubscriptionCanceled: (payload) => applySubscriptionEvent(payload.data),
+        onSubscriptionRevoked: (payload) => applySubscriptionEvent(payload.data, "canceled"),
       }),
     ],
   }),

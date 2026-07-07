@@ -14,9 +14,18 @@ interface Props {
   description: string;
   noindex?: boolean;
   canonicalPath?: string;
+  badgeHidden?: boolean;
 }
 
-const { config, basePath, title, description, noindex = false, canonicalPath } = Astro.props;
+const {
+  config,
+  basePath,
+  title,
+  description,
+  noindex = false,
+  canonicalPath,
+  badgeHidden = false,
+} = Astro.props;
 const themeStyle = portalThemeStyleAttr(config.style.theme);
 const canonical = new URL(canonicalPath ?? Astro.url.pathname, env.APP_URL).toString();
 ---
@@ -50,7 +59,7 @@ const canonical = new URL(canonicalPath ?? Astro.url.pathname, env.APP_URL).toSt
         <main>
           <slot />
         </main>
-        <PortalBadge rootUrl={new URL("/templates", env.APP_URL).toString()} />
+        <PortalBadge rootUrl={new URL("/templates", env.APP_URL).toString()} hidden={badgeHidden} />
       </div>
     </div>
   </body>

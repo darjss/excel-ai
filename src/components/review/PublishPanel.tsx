@@ -1,9 +1,11 @@
+import { useMutation } from "@tanstack/solid-query";
 import ExternalLink from "lucide-solid/icons/external-link";
-import { Show, createResource, createSignal } from "solid-js";
+import { For, Show, createResource, createSignal, onMount } from "solid-js";
 import { toast } from "solid-sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { queryErrorMessage } from "@/lib/api";
+import { ApiError, api, queryErrorMessage, unwrap } from "@/lib/api";
+import { plans } from "@/lib/plans";
 import { fetchSlugAvailability, usePublishPortal } from "@/lib/queries/review";
 import { isValidSlug, suggestSlug } from "@/review/slug";
 
@@ -16,7 +18,17 @@ export interface PublishPanelProps {
 export const PublishPanel = (props: PublishPanelProps) => {
   const [slug, setSlug] = createSignal(suggestSlug(props.businessName));
   const [published, setPublished] = createSignal<{ slug: string; portalUrl: string } | null>(null);
+  const [paywalled, setPaywalled] = createSignal(false);
   const publish = usePublishPortal(() => props.jobId);
+
+  const checkout = useMutation(() => ({
+    mutationFn: async (planSlug: string) => {
+      const successPath = `${window.location.pathname}?checkout=success&slug=${encodeURIComponent(slug())}`;
+      return unwrap(await api.billing.checkout.post({ planSlug, successPath }));
+    },
+    onSuccess: (result) => window.location.assign(result.url),
+    onError: (error) => toast.error(queryErrorMessage(error)),
+  }));
 
   const [availability] = createResource(
     () => (isValidSlug(slug()) ? slug() : null),
@@ -30,11 +42,26 @@ export const PublishPanel = (props: PublishPanelProps) => {
     !publish.isPending;
 
   const onPublish = (): void => {
+    setPaywalled(false);
     publish.mutate(slug(), {
       onSuccess: (result) => setPublished(result),
-      onError: (error) => toast.error(queryErrorMessage(error)),
+      onError: (error) => {
+        if (error instanceof ApiError && error.status === 402) {
+          setPaywalled(true);
+          return;
+        }
+        toast.error(queryErrorMessage(error));
+      },
     });
   };
+
+  onMount(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") !== "success") return;
+    const returned = params.get("slug");
+    if (returned) setSlug(returned);
+    if (props.openQuestions === 0) onPublish();
+  });
 
   return (
     <div class="bg-card flex flex-col gap-3 rounded-xl border p-4">
@@ -81,6 +108,35 @@ export const PublishPanel = (props: PublishPanelProps) => {
                 {props.openQuestions}{" "}
                 {props.openQuestions === 1 ? "question unanswered" : "questions unanswered"}
               </p>
+            </Show>
+            <Show when={paywalled()}>
+              <div class="flex flex-col gap-3 border-t pt-3">
+                <div>
+                  <h4 class="font-semibold">Choose a plan to publish</h4>
+                  <p class="text-muted-foreground text-sm">
+                    Extraction and preview are free. Publishing your portal needs a paid plan.
+                  </p>
+                </div>
+                <div class="grid gap-2 sm:grid-cols-2">
+                  <For each={plans}>
+                    {(plan) => (
+                      <div class="flex flex-col gap-2 rounded-lg border p-3">
+                        <div>
+                          <p class="font-medium">{plan.name}</p>
+                          <p class="text-muted-foreground text-sm">${plan.priceMonthly}/mo</p>
+                        </div>
+                        <Button
+                          variant={plan.highlighted ? "default" : "outline"}
+                          disabled={checkout.isPending}
+                          onClick={() => checkout.mutate(plan.slug)}
+                        >
+                          {checkout.isPending ? "Redirecting…" : `Choose ${plan.name}`}
+                        </Button>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
             </Show>
           </>
         }

@@ -23,6 +23,7 @@
     "polar:setup": "tsx scripts/polar-setup.ts",
     "extraction:ci": "tsx scripts/extraction-ci.ts",
     "review:ci": "tsx scripts/review-publish-ci.ts",
+    "billing:ci": "tsx scripts/billing-ci.ts",
     "extraction:live": "tsx scripts/extraction-live.ts"
   },
   "dependencies": {

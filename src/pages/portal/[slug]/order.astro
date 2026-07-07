@@ -8,11 +8,17 @@ export const prerender = false;
 const data = await loadPortalPage(Astro.request, Astro.url);
 if (!data) return new Response("Portal not found", { status: 404 });
 
-const { config, basePath, slug } = data;
+const { config, basePath, slug, badgeHidden } = data;
 const title = `Order — ${config.business.name}`;
 const description = `Place an order with ${config.business.name}.`;
 ---
 
-<PortalLayout config={config} basePath={basePath} title={title} description={description}>
+<PortalLayout
+  config={config}
+  basePath={basePath}
+  title={title}
+  description={description}
+  badgeHidden={badgeHidden}
+>
   <OrderForm client:load config={config} slug={slug} />
 </PortalLayout>

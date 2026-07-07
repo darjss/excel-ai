@@ -9,7 +9,7 @@ export const prerender = false;
 const data = await loadPortalPage(Astro.request, Astro.url);
 if (!data) return new Response("Portal not found", { status: 404 });
 
-const { config, basePath, slug } = data;
+const { config, basePath, slug, badgeHidden } = data;
 const token = Astro.params.token ?? "";
 const resolved = await resolveSupplierBuyerLink(slug, token);
 
@@ -33,6 +33,7 @@ const attribution =
   description={description}
   noindex={true}
   canonicalPath={basePath}
+  badgeHidden={badgeHidden}
 >
   {
     attribution ? (

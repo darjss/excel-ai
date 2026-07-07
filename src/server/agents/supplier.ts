@@ -1,5 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
 import { Agent } from "agents";
+import type { PlanSlug } from "@/lib/plans";
 import { type ParseErrorDetail, type PortalConfig, parsePortalConfig } from "@/portal-config";
 import {
   type BuyerLink,
@@ -34,8 +35,14 @@ export type SupplierEcho = {
 export interface PortalState {
   config: PortalConfig | null;
   published: boolean;
+  publishedTier: PlanSlug | null;
   orders: Order[];
   buyerLinks: BuyerLink[];
+}
+
+export interface PublishedPortal {
+  config: PortalConfig;
+  tier: PlanSlug;
 }
 
 export type SetPortalConfigResult =
@@ -51,7 +58,13 @@ export type OrderMutationResult =
   | { kind: "unknown-product"; productIds: readonly string[] };
 
 export class SupplierAgent extends Agent<Cloudflare.Env, PortalState> {
-  initialState: PortalState = { config: null, published: false, orders: [], buyerLinks: [] };
+  initialState: PortalState = {
+    config: null,
+    published: false,
+    publishedTier: null,
+    orders: [],
+    buyerLinks: [],
+  };
 
   private get orders(): Order[] {
     return this.state.orders ?? [];
@@ -70,18 +83,23 @@ export class SupplierAgent extends Agent<Cloudflare.Env, PortalState> {
     if (!result.ok) {
       return { ok: false, error: { message: result.error.message, details: result.error.details } };
     }
-    this.setState({ ...this.state, config: result.data, published: false });
+    this.setState({ ...this.state, config: result.data, published: false, publishedTier: null });
     return { ok: true };
   }
 
-  publish(): boolean {
+  publish(tier: PlanSlug): boolean {
     if (!this.state.config) return false;
-    this.setState({ ...this.state, published: true });
+    this.setState({ ...this.state, published: true, publishedTier: tier });
     return true;
   }
 
   getPortalConfig(): PortalConfig | null {
     return this.state.published ? this.state.config : null;
+  }
+
+  getPublished(): PublishedPortal | null {
+    if (!this.state.published || !this.state.config) return null;
+    return { config: this.state.config, tier: this.state.publishedTier ?? "standard" };
   }
 
   createBuyerLink(buyerName: string, contact?: string): BuyerLink {
