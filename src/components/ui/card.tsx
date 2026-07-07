@@ -1,76 +1,93 @@
-import * as React from "react"
+import { type ComponentProps, mergeProps, splitProps } from "solid-js";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
+type CardProps = ComponentProps<"div"> & { size?: "default" | "sm" };
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+const Card = (props: CardProps) => {
+  const mergedProps = mergeProps({ size: "default" } as const, props);
+  const [local, others] = splitProps(mergedProps, ["class", "size"]);
   return (
     <div
       data-slot="card"
-      className={cn(
-        "bg-bg-4 dark:bg-bg-2 text-text-primary flex flex-col rounded-md border",
-        className
-      )}
-      {...props}
+      data-size={local.size}
+      class={cn("group/card z-card flex flex-col", local.class)}
+      {...others}
     />
-  )
-}
+  );
+};
 
-function CardHeader({ className, variant, ...props }: React.ComponentProps<"div"> & { variant?: "minimal"}) {
+type CardHeaderProps = ComponentProps<"div">;
+
+const CardHeader = (props: CardHeaderProps) => {
+  const [local, others] = splitProps(props, ["class"]);
   return (
     <div
       data-slot="card-header"
-      className={cn(
-        "flex items-start gap-1.5 py-4 px-4",
-        className,
-        variant !== "minimal" ? "py-4" : "py-1",
+      class={cn(
+        "group/card-header @container/card-header z-card-header grid auto-rows-min items-start has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto]",
+        local.class,
       )}
-      {...props}
+      {...others}
     />
-  )
-}
+  );
+};
 
-const CardTitle = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("font-semibold leading-none tracking-tight", className)}
-    {...props}
-  />
-))
-CardTitle.displayName = "CardTitle"
+type CardTitleProps = ComponentProps<"div">;
 
-const CardDescription = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("text-sm text-text-secondary", className)}
-    {...props}
-  />
-))
-CardDescription.displayName = "CardDescription"
+const CardTitle = (props: CardTitleProps) => {
+  const [local, others] = splitProps(props, ["class"]);
+  return (
+    <div
+      data-slot="card-title"
+      class={cn("z-card-title z-font-heading", local.class)}
+      {...others}
+    />
+  );
+};
 
-const CardContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
-))
-CardContent.displayName = "CardContent"
+type CardDescriptionProps = ComponentProps<"div">;
 
-const CardFooter = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("px-6  py-4", className)}
-    {...props}
-  />
-))
-CardFooter.displayName = "CardFooter"
+const CardDescription = (props: CardDescriptionProps) => {
+  const [local, others] = splitProps(props, ["class"]);
+  return (
+    <div data-slot="card-description" class={cn("z-card-description", local.class)} {...others} />
+  );
+};
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+type CardActionProps = ComponentProps<"div">;
+
+const CardAction = (props: CardActionProps) => {
+  const [local, others] = splitProps(props, ["class"]);
+  return (
+    <div
+      data-slot="card-action"
+      class={cn(
+        "z-card-action col-start-2 row-span-2 row-start-1 self-start justify-self-end",
+        local.class,
+      )}
+      {...others}
+    />
+  );
+};
+
+type CardContentProps = ComponentProps<"div">;
+
+const CardContent = (props: CardContentProps) => {
+  const [local, others] = splitProps(props, ["class"]);
+  return <div data-slot="card-content" class={cn("z-card-content", local.class)} {...others} />;
+};
+
+type CardFooterProps = ComponentProps<"div">;
+
+const CardFooter = (props: CardFooterProps) => {
+  const [local, others] = splitProps(props, ["class"]);
+  return (
+    <div
+      data-slot="card-footer"
+      class={cn("z-card-footer flex items-center", local.class)}
+      {...others}
+    />
+  );
+};
+
+export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle };
