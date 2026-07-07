@@ -5,6 +5,7 @@ export type ExtractionPhase =
   | "reason"
   | "verify"
   | "validate"
+  | "style"
   | "done"
   | "error";
 
@@ -22,7 +23,8 @@ const PHASE_PERCENT: Record<ExtractionPhase, number> = {
   compact: 30,
   reason: 55,
   verify: 80,
-  validate: 92,
+  validate: 90,
+  style: 96,
   done: 100,
   error: 100,
 };
