@@ -52,5 +52,6 @@
     "EXTRACTION_RATE_LIMIT_PER_HOUR": "5",
     "PORTAL_HOST_SUFFIX": ".portals.localhost:4321",
     "PORTAL_SEED_ENABLED": "false",
+    "EXTRACTION_SEED_ENABLED": "false",
   },
 }

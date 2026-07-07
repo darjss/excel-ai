@@ -6,12 +6,14 @@ import { AppLayout } from "./AppLayout";
 import { AdminPage } from "./routes/AdminPage";
 import { BillingPage } from "./routes/BillingPage";
 import { ProjectsPage } from "./routes/ProjectsPage";
+import { ReviewPage } from "./routes/ReviewPage";
 import { SettingsPage } from "./routes/SettingsPage";
 
 export const AppRoot = () => (
   <QueryClientProvider client={queryClient}>
     <Router base="/app" root={AppLayout}>
       <Route path="/" component={ProjectsPage} />
+      <Route path="/review/:jobId" component={ReviewPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/billing" component={BillingPage} />
       <Route path="/admin" component={AdminPage} />
