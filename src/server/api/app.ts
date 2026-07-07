@@ -6,6 +6,7 @@ import { agentRoute } from "./routes/agent";
 import { billingRoute } from "./routes/billing";
 import { extractionRoute } from "./routes/extraction";
 import { healthRoute } from "./routes/health";
+import { ordersRoute } from "./routes/orders";
 import { portalRoute } from "./routes/portal";
 import { projectsRoute } from "./routes/projects";
 
@@ -18,6 +19,7 @@ export const app = new Elysia({ prefix: "/api", aot: false })
   .use(adminRoute)
   .use(agentRoute)
   .use(extractionRoute)
+  .use(ordersRoute)
   .use(portalRoute);
 
 export type App = typeof app;
