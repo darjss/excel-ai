@@ -12,6 +12,11 @@ export interface RateLimitDecision {
   remaining: number;
 }
 
+export interface RateLimitStore {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+}
+
 const parseLimit = (raw: string | undefined): number => {
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_LIMIT;
@@ -39,14 +44,15 @@ const refill = (bucket: Bucket, limit: number, now: number): number => {
   return Math.min(limit, bucket.tokens + restored);
 };
 
-export const consumeExtractionToken = async (
-  cache: KVNamespace,
+const consumeToken = async (
+  cache: RateLimitStore,
+  scope: string,
   ip: string,
   limitVar: string | undefined,
 ): Promise<RateLimitDecision> => {
   const limit = parseLimit(limitVar);
   const now = Date.now();
-  const key = `ratelimit:extraction:${ip}`;
+  const key = `ratelimit:${scope}:${ip}`;
   const stored = parseBucket(await cache.get(key), limit, now);
   const available = refill(stored, limit, now);
 
@@ -58,3 +64,15 @@ export const consumeExtractionToken = async (
   await cache.put(key, JSON.stringify(next), { expirationTtl: 3600 });
   return { allowed: true, limit, remaining: Math.floor(next.tokens) };
 };
+
+export const consumeExtractionToken = (
+  cache: RateLimitStore,
+  ip: string,
+  limitVar: string | undefined,
+): Promise<RateLimitDecision> => consumeToken(cache, "extraction", ip, limitVar);
+
+export const consumeWhiteGloveToken = (
+  cache: RateLimitStore,
+  ip: string,
+  limitVar: string | undefined,
+): Promise<RateLimitDecision> => consumeToken(cache, "white-glove", ip, limitVar);

@@ -17,3 +17,15 @@ export const project = sqliteTable(
   },
   (table) => [index("project_owner_idx").on(table.ownerId)],
 );
+
+export const whiteGloveRequest = sqliteTable(
+  "white_glove_request",
+  {
+    id: id(),
+    email: text("email").notNull(),
+    jobId: text("job_id").notNull(),
+    reason: text("reason").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index("white_glove_job_idx").on(table.jobId)],
+);

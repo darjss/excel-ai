@@ -48,8 +48,8 @@ describe("runExtraction pipeline (mocked model)", () => {
       chat: proposingChat(wholesaleConfig),
       emit: (event) => events.push(event.phase),
     });
-    expect(outcome.ok).toBe(true);
-    if (outcome.ok) expect(outcome.config.business.name).toBe("Northgate Provisions");
+    expect(outcome.kind).toBe("ready");
+    if (outcome.kind === "ready") expect(outcome.config.business.name).toBe("Northgate Provisions");
     expect(events).toContain("parse");
     expect(events).toContain("verify");
     expect(events.at(-1)).toBe("done");
@@ -64,8 +64,8 @@ describe("runExtraction pipeline (mocked model)", () => {
     }
 
     const outcome = await runExtraction(WORKBOOK, { chat: proposingChat(badTax) });
-    expect(outcome.ok).toBe(true);
-    if (!outcome.ok) return;
+    expect(outcome.kind).toBe("ready");
+    if (outcome.kind !== "ready") return;
     const taxFinding = outcome.config.findings.find((finding) => finding.targetRef?.id === "sales-tax");
     expect(taxFinding?.confidence).toBe("low");
     expect(taxFinding?.question).toBeDefined();
@@ -76,8 +76,8 @@ describe("runExtraction pipeline (mocked model)", () => {
     const outcome = await runExtraction(WORKBOOK, {
       chat: proposingWithStyle(wholesaleConfig, ["about"]),
     });
-    expect(outcome.ok).toBe(true);
-    if (!outcome.ok) return;
+    expect(outcome.kind).toBe("ready");
+    if (outcome.kind !== "ready") return;
     expect(outcome.config.style).toEqual(buildDefaultStyle(outcome.config));
   });
 
@@ -86,14 +86,54 @@ describe("runExtraction pipeline (mocked model)", () => {
     const outcome = await runExtraction(WORKBOOK, {
       chat: proposingWithStyle(wholesaleConfig, sections),
     });
-    expect(outcome.ok).toBe(true);
-    if (!outcome.ok) return;
+    expect(outcome.kind).toBe("ready");
+    if (outcome.kind !== "ready") return;
     expect(outcome.config.style.sections).toEqual(sections);
   });
 
-  it("reports failure when the model never proposes a draft", async () => {
+  it("routes to needs-human when the model never proposes a draft", async () => {
     const chat: ChatFn = async () => ({ content: "no tools here", finishReason: "stop", toolCalls: [] });
     const outcome = await runExtraction(WORKBOOK, { chat });
-    expect(outcome.ok).toBe(false);
+    expect(outcome.kind).toBe("needs-human");
+    if (outcome.kind === "needs-human") expect(outcome.reason).toBe("no-draft");
+  });
+
+  const unpricedDraft = () => {
+    const unpriced = structuredClone(wholesaleConfig);
+    unpriced.catalog.tables = unpriced.catalog.tables.map((table) => ({
+      ...table,
+      products: table.products.map((product) => ({
+        ...product,
+        unitPrice: { ...product.unitPrice, amount: 0 },
+      })),
+    }));
+    return unpriced;
+  };
+
+  it("drops into builder mode when the draft has no usable prices", async () => {
+    const outcome = await runExtraction(WORKBOOK, { chat: proposingChat(unpricedDraft()) });
+    expect(outcome.kind).toBe("builder-mode");
+    if (outcome.kind === "builder-mode") expect(outcome.preview.length).toBeGreaterThan(0);
+  });
+
+  it("re-runs with supplier hints and escalates to needs-human when still unviable", async () => {
+    const hints = {
+      sheet: "PriceList",
+      range: "A1:E40",
+      columns: { product: "B", price: "E" },
+    };
+    const outcome = await runExtraction(WORKBOOK, { chat: proposingChat(unpricedDraft()) }, hints);
+    expect(outcome.kind).toBe("needs-human");
+    if (outcome.kind === "needs-human") expect(outcome.reason).toBe("unviable-after-hints");
+  });
+
+  it("produces a ready portal on a hinted re-run when the draft is viable", async () => {
+    const hints = {
+      sheet: "PriceList",
+      range: "A1:E40",
+      columns: { product: "B", price: "E" },
+    };
+    const outcome = await runExtraction(WORKBOOK, { chat: proposingChat(wholesaleConfig) }, hints);
+    expect(outcome.kind).toBe("ready");
   });
 });

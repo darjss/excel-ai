@@ -1,0 +1,13 @@
+---
+import { ReviewLadder } from "@/components/review/ReviewLadder";
+import Layout from "@/layouts/Layout.astro";
+
+export const prerender = false;
+
+const { jobId } = Astro.params;
+if (!jobId) return new Response("Missing job id", { status: 404 });
+---
+
+<Layout title="Review your portal — Sheetstand">
+  <ReviewLadder client:only="solid-js" jobId={jobId} />
+</Layout>
