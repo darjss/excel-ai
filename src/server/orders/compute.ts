@@ -42,10 +42,21 @@ export interface Totals {
 type OrderMinimumRule = Extract<Rule, { type: "order-minimum" }>;
 type LineTotalRule = Extract<Rule, { type: "line-total" }>;
 
+export interface TaxableLine {
+  productId: string;
+  categoryId?: string;
+  lineTotal: Money;
+}
+
+export interface TaxOnBasis {
+  display: number;
+  added: number;
+  applied: boolean;
+}
+
 interface RuleBuckets {
   tiers: TierPricingRule[];
   minimums: OrderMinimumRule[];
-  taxes: TaxRule[];
   lineTotal: LineTotalRule | undefined;
 }
 
@@ -54,7 +65,7 @@ const unreachable = (value: never): never => {
 };
 
 const bucketRules = (rules: readonly Rule[]): RuleBuckets => {
-  const buckets: RuleBuckets = { tiers: [], minimums: [], taxes: [], lineTotal: undefined };
+  const buckets: RuleBuckets = { tiers: [], minimums: [], lineTotal: undefined };
   for (const rule of rules) {
     switch (rule.type) {
       case "tier-pricing":
@@ -64,7 +75,6 @@ const bucketRules = (rules: readonly Rule[]): RuleBuckets => {
         buckets.minimums.push(rule);
         break;
       case "tax":
-        buckets.taxes.push(rule);
         break;
       case "line-total":
         buckets.lineTotal = rule;
@@ -76,7 +86,12 @@ const bucketRules = (rules: readonly Rule[]): RuleBuckets => {
   return buckets;
 };
 
-const scopeMatches = (scope: RuleScope, line: CartLineInput): boolean => {
+interface ScopeSubject {
+  productId: string;
+  categoryId?: string;
+}
+
+const scopeMatches = (scope: RuleScope, line: ScopeSubject): boolean => {
   switch (scope.target) {
     case "all":
       return true;
@@ -154,18 +169,27 @@ const scopedSubtotal = (
 const scopedQuantity = (scope: RuleScope, cart: readonly CartLineInput[]): number =>
   cart.reduce((sum, line) => (scopeMatches(scope, line) ? sum + line.quantity : sum), 0);
 
-const taxForRule = (
-  rule: TaxRule,
-  cart: readonly CartLineInput[],
-  computed: readonly ComputedLine[],
-): { display: number; added: number } => {
-  const base = scopedSubtotal(rule.scope, cart, computed);
-  if (rule.inclusive) {
-    const portion = Math.round((base * rule.ratePercent) / (100 + rule.ratePercent));
-    return { display: portion, added: 0 };
+const scopedTaxBasis = (scope: RuleScope, lines: readonly TaxableLine[]): number =>
+  lines.reduce((sum, line) => (scopeMatches(scope, line) ? sum + line.lineTotal.amount : sum), 0);
+
+export const computeTaxOnBasis = (
+  rules: readonly Rule[],
+  lines: readonly TaxableLine[],
+): TaxOnBasis => {
+  const taxes = rules.filter((rule): rule is TaxRule => rule.type === "tax");
+  let display = 0;
+  let added = 0;
+  for (const rule of taxes) {
+    const base = scopedTaxBasis(rule.scope, lines);
+    if (rule.inclusive) {
+      display += Math.round((base * rule.ratePercent) / (100 + rule.ratePercent));
+      continue;
+    }
+    const portion = Math.round((base * rule.ratePercent) / 100);
+    display += portion;
+    added += portion;
   }
-  const portion = Math.round((base * rule.ratePercent) / 100);
-  return { display: portion, added: portion };
+  return { display, added, applied: taxes.length > 0 };
 };
 
 const violationFor = (
@@ -192,13 +216,12 @@ export const computeTotals = (rules: readonly Rule[], cart: Cart): Totals => {
   const lines = cart.lines.map((line) => priceLine(line, buckets.tiers));
   const subtotal = lines.reduce((sum, line) => sum + line.lineTotal.amount, 0);
 
-  let taxDisplay = 0;
-  let taxAdded = 0;
-  for (const rule of buckets.taxes) {
-    const { display, added } = taxForRule(rule, cart.lines, lines);
-    taxDisplay += display;
-    taxAdded += added;
-  }
+  const taxable: TaxableLine[] = cart.lines.map((line, index) => ({
+    productId: line.productId,
+    categoryId: line.categoryId,
+    lineTotal: lines[index]?.lineTotal ?? { currencyCode, amount: 0 },
+  }));
+  const tax = computeTaxOnBasis(rules, taxable);
 
   const violations: Violation[] = [];
   for (const rule of buckets.minimums) {
@@ -210,8 +233,8 @@ export const computeTotals = (rules: readonly Rule[], cart: Cart): Totals => {
     currencyCode,
     lines,
     subtotal: { currencyCode, amount: subtotal },
-    tax: buckets.taxes.length > 0 ? { currencyCode, amount: taxDisplay } : undefined,
-    total: { currencyCode, amount: subtotal + taxAdded },
+    tax: tax.applied ? { currencyCode, amount: tax.display } : undefined,
+    total: { currencyCode, amount: subtotal + tax.added },
     violations,
   };
 };
