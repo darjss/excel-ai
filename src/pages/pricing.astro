@@ -1,19 +1,53 @@
 ---
+import Check from "lucide-solid/icons/check";
+import CommissionComparison from "@/components/marketing/CommissionComparison.astro";
 import Footer from "@/components/marketing/Footer.astro";
-import { PlanCard } from "@/components/marketing/PlanCard";
+import MarketingHeader from "@/components/marketing/MarketingHeader.astro";
 import Layout from "@/layouts/Layout.astro";
-import { plans } from "@/lib/plans";
+import { pricingTiers } from "@/marketing/pricing";
+
+const title = "Pricing — Sheetstand";
+const description =
+  "Flat $29 or $49 a month. Unlimited buyers, unlimited orders, no commission and no per-user fees.";
 ---
 
-<Layout title="Pricing — Sheetstand">
+<Layout title={title} description={description}>
+  <MarketingHeader />
   <main class="mx-auto max-w-4xl px-6 py-20">
-    <h1 class="text-center text-4xl font-bold tracking-tight">Pricing</h1>
-    <p class="text-muted-foreground mt-4 text-center">
-      Start free, upgrade when you outgrow it.
+    <h1 class="text-center text-4xl font-bold tracking-tight">Flat pricing, no commission</h1>
+    <p class="text-muted-foreground mx-auto mt-4 max-w-2xl text-center">
+      Anonymous extraction and a watermarked preview are free. Publishing is the paywall. Unlimited
+      buyers and orders on every plan, and a 14-day money-back guarantee.
     </p>
     <div class="mt-12 grid gap-8 sm:grid-cols-2">
-      {plans.map((plan) => <PlanCard client:load plan={plan} />)}
+      {
+        pricingTiers.map((tier) => (
+          <div class:list={["flex flex-col rounded-xl border p-6", tier.highlighted && "border-primary"]}>
+            <h2 class="text-lg font-semibold">{tier.name}</h2>
+            <p class="mt-2 text-4xl font-bold">
+              ${tier.priceMonthly}
+              <span class="text-muted-foreground text-base font-normal">/mo</span>
+            </p>
+            <p class="text-muted-foreground mt-2 text-sm">{tier.tagline}</p>
+            <ul class="mt-6 space-y-2 text-sm">
+              {tier.features.map((feature) => (
+                <li class="flex items-start gap-2">
+                  <Check class="text-primary mt-0.5 size-4 shrink-0" />
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
+            <a
+              href="/login"
+              class="bg-primary text-primary-foreground mt-8 inline-flex h-11 items-center justify-center rounded-md px-5 text-sm font-medium"
+            >
+              Start free
+            </a>
+          </div>
+        ))
+      }
     </div>
   </main>
+  <CommissionComparison />
   <Footer />
 </Layout>

@@ -3,13 +3,13 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.8.0",
   "scripts": {
     "postinstall": "wrangler types",
-    "dev": "astro dev",
-    "build": "astro build",
+    "templates:build": "tsx scripts/build-templates.ts",
+    "dev": "tsx scripts/build-templates.ts && astro dev",
+    "build": "tsx scripts/build-templates.ts && astro build",
     "preview": "wrangler dev",
-    "deploy": "astro build && wrangler deploy",
+    "deploy": "pnpm run build && wrangler deploy",
     "typecheck": "astro check",
     "lint": "vp lint",
     "test": "vp test run",
@@ -27,11 +27,10 @@
   "dependencies": {
     "@astrojs/cloudflare": "^14.1.1",
     "@astrojs/solid-js": "^7.0.1",
-    "@flue/runtime": "1.0.0-beta.9",
-    "agents": "0.14.5",
     "@better-auth/sso": "^1.6.23",
     "@corvu/drawer": "^0.2.4",
     "@elysiajs/eden": "^1.4.9",
+    "@flue/runtime": "1.0.0-beta.9",
     "@fontsource-variable/inter": "^5.2.8",
     "@kobalte/core": "^0.13.12",
     "@paralleldrive/cuid2": "^3.3.0",
@@ -41,6 +40,7 @@
     "@t3-oss/env-core": "^0.13.11",
     "@tailwindcss/vite": "^4.3.2",
     "@tanstack/solid-query": "^5.101.2",
+    "agents": "0.14.5",
     "astro": "^7.0.6",
     "better-auth": "^1.6.23",
     "class-variance-authority": "^0.7.1",
@@ -60,8 +60,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
-    "@flue/cli": "1.0.0-beta.9",
     "@better-auth/cli": "^1.4.21",
+    "@flue/cli": "1.0.0-beta.9",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.0.0",
     "better-sqlite3": "^12.11.1",
@@ -71,5 +71,6 @@
     "vite-plus": "^0.1.24",
     "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.24",
     "wrangler": "^4.107.0"
-  }
+  },
+  "packageManager": "pnpm@11.8.0"
 }

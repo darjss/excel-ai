@@ -1,0 +1,70 @@
+---
+import { templatePreview } from "@/marketing/preview";
+import type { TemplateSpec } from "@/marketing/templates";
+
+interface Props {
+  spec: TemplateSpec;
+  limit?: number;
+}
+
+const { spec, limit } = Astro.props;
+const preview = templatePreview(spec);
+const rows = limit === undefined ? preview.rows : preview.rows.slice(0, limit);
+const hiddenCount = preview.rows.length - rows.length;
+---
+
+<div class="overflow-x-auto rounded-lg border bg-card">
+  <table class="w-full min-w-[36rem] border-collapse text-left text-sm">
+    <thead>
+      <tr class="bg-muted/60 text-muted-foreground">
+        <th class="px-3 py-2 font-medium">Product</th>
+        <th class="px-3 py-2 font-medium">Unit</th>
+        <th class="px-3 py-2 text-right font-medium">Unit price</th>
+        <th class="px-3 py-2 text-right font-medium">Qty</th>
+        <th class="px-3 py-2 text-right font-medium">Line total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((row) => (
+          <tr class="border-t">
+            <td class="px-3 py-2">{row.product}</td>
+            <td class="text-muted-foreground px-3 py-2">{row.unit}</td>
+            <td class="px-3 py-2 text-right tabular-nums">{row.unitPrice}</td>
+            <td class="px-3 py-2 text-right tabular-nums">{row.quantity}</td>
+            <td class="px-3 py-2 text-right tabular-nums">{row.lineTotal}</td>
+          </tr>
+        ))
+      }
+      {
+        hiddenCount > 0 && (
+          <tr class="border-t">
+            <td class="text-muted-foreground px-3 py-2 text-xs" colspan="5">
+              + {hiddenCount} more line items
+            </td>
+          </tr>
+        )
+      }
+    </tbody>
+    <tfoot class="border-t-2">
+      <tr>
+        <td class="px-3 py-2" colspan="4">Subtotal</td>
+        <td class="px-3 py-2 text-right font-medium tabular-nums">{preview.subtotal}</td>
+      </tr>
+      {
+        preview.tax && (
+          <tr>
+            <td class="text-muted-foreground px-3 py-2" colspan="4">
+              {preview.tax.label}
+            </td>
+            <td class="px-3 py-2 text-right tabular-nums">{preview.tax.amount}</td>
+          </tr>
+        )
+      }
+      <tr class="border-t">
+        <td class="px-3 py-2 font-semibold" colspan="4">Total</td>
+        <td class="px-3 py-2 text-right font-semibold tabular-nums">{preview.total}</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>

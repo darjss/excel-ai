@@ -1,0 +1,33 @@
+---
+import { commissionComparison } from "@/marketing/pricing";
+---
+
+<section class="mx-auto max-w-5xl px-6 py-20">
+  <h2 class="text-center text-3xl font-bold tracking-tight">Why not a marketplace</h2>
+  <p class="text-muted-foreground mx-auto mt-4 max-w-2xl text-center">
+    Marketplaces take a cut of every order and rent you your own buyers. App builders charge per
+    user and make you rebuild your pricing by hand. Sheetstand does neither.
+  </p>
+  <div class="mt-12 overflow-x-auto rounded-xl border">
+    <table class="w-full min-w-[40rem] border-collapse text-left text-sm">
+      <thead>
+        <tr class="bg-muted/60">
+          <th class="px-4 py-3 font-medium"></th>
+          <th class="px-4 py-3 font-semibold">Sheetstand</th>
+          <th class="text-muted-foreground px-4 py-3 font-medium">Marketplace / app builder</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          commissionComparison.map((row) => (
+            <tr class="border-t">
+              <td class="text-muted-foreground px-4 py-3">{row.label}</td>
+              <td class="px-4 py-3 font-medium">{row.sheetstand}</td>
+              <td class="text-muted-foreground px-4 py-3">{row.incumbent}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

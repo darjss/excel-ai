@@ -47,7 +47,7 @@ const canonical = new URL(Astro.url.pathname, env.APP_URL).toString();
         <main>
           <slot />
         </main>
-        <PortalBadge rootUrl={env.APP_URL} />
+        <PortalBadge rootUrl={new URL("/templates", env.APP_URL).toString()} />
       </div>
     </div>
   </body>
