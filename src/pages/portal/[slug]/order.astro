@@ -1,4 +1,5 @@
 ---
+import { OrderForm } from "@/components/portal/OrderForm";
 import PortalLayout from "@/layouts/PortalLayout.astro";
 import { loadPortalPage } from "@/server/portal/page";
 
@@ -7,22 +8,11 @@ export const prerender = false;
 const data = await loadPortalPage(Astro.request, Astro.url);
 if (!data) return new Response("Portal not found", { status: 404 });
 
-const { config, basePath } = data;
+const { config, basePath, slug } = data;
 const title = `Order — ${config.business.name}`;
 const description = `Place an order with ${config.business.name}.`;
 ---
 
 <PortalLayout config={config} basePath={basePath} title={title} description={description}>
-  <section class="flex flex-col items-start gap-4 py-16">
-    <h1
-      class="text-3xl font-bold"
-      style="font-family:var(--portal-font-heading)"
-    >
-      Order Form
-    </h1>
-    <p class="max-w-2xl text-[var(--portal-foreground)]/80">
-      The Order Form for {config.business.name} is coming soon. You'll be able to select line items,
-      set quantities, and submit an Order here.
-    </p>
-  </section>
+  <OrderForm client:load config={config} slug={slug} />
 </PortalLayout>
