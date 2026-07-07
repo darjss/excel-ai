@@ -33,6 +33,26 @@ describe("order emails", () => {
     expect(email.text).toContain("happy@example.com");
   });
 
+  it("surfaces link attribution in the supplier notification", () => {
+    const attributed = buildOrder(
+      bakeryConfig,
+      {
+        buyer: { name: "Cafe Rosa", contact: "orders@caferosa.example" },
+        lines: [{ productId: "sourdough-classic", quantity: 4 }],
+        buyerLinkToken: "tok_cafe",
+      },
+      {
+        id: "order-link",
+        now: 1_700_000_000_000,
+        source: "portal",
+        attribution: { token: "tok_cafe", buyerName: "Cafe Rosa" },
+      },
+    );
+    const email = supplierNotificationEmail(attributed, bakeryConfig.business);
+    expect(email.subject).toContain("Cafe Rosa via their link");
+    expect(email.text).toContain("via their link");
+  });
+
   it("sends to both buyer and supplier through the sendEmail seam", async () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
     await sendOrderEmails(order, bakeryConfig.business);

@@ -2,9 +2,13 @@ import { Elysia, t } from "elysia";
 import { env } from "@/env";
 import { portalConfigFixtures } from "@/portal-config";
 import { submitBodyT } from "@/server/orders/submit-schema";
+import { createSupplierBuyerLink } from "@/server/portal/buyer-links";
 import { submitPortalOrder } from "@/server/portal/orders";
 import { publishPortalConfig } from "@/server/portal/store";
 import { ConflictError, NotFoundError } from "../errors";
+
+const BUYER_LINK_INVALID_MESSAGE =
+  "This order link is no longer active. Please ask your supplier for a fresh link.";
 
 const moneyT = t.Object({ currencyCode: t.String(), amount: t.Integer() });
 
@@ -38,6 +42,8 @@ const orderT = t.Object({
   violations: t.Array(violationT),
   currencyCode: t.String(),
   source: t.Union([t.Literal("portal"), t.Literal("manual")]),
+  buyerLinkToken: t.Optional(t.String()),
+  buyerLinkName: t.Optional(t.String()),
   createdAt: t.Integer(),
   updatedAt: t.Integer(),
 });
@@ -56,18 +62,22 @@ export const portalRoute = new Elysia()
       }
 
       const seeded: string[] = [];
+      const buyerLinks: { slug: string; token: string }[] = [];
       for (const [slug, config] of Object.entries(portalConfigFixtures)) {
         const result = await publishPortalConfig(slug, config);
         if (!result.ok) {
           throw new ConflictError(`Fixture ${slug} failed validation: ${result.error.message}`);
         }
         seeded.push(slug);
+        const link = await createSupplierBuyerLink(slug, "Cafe Rosa", "orders@caferosa.example");
+        buyerLinks.push({ slug, token: link.token });
       }
-      return { seeded };
+      return { seeded, buyerLinks };
     },
     {
       response: t.Object({
         seeded: t.Array(t.String()),
+        buyerLinks: t.Array(t.Object({ slug: t.String(), token: t.String() })),
       }),
     },
   )
@@ -76,6 +86,7 @@ export const portalRoute = new Elysia()
     async ({ params, body }) => {
       const result = await submitPortalOrder(params.slug, body);
       if (result.kind === "not-published") throw new NotFoundError("Portal not found");
+      if (result.kind === "invalid-link") throw new ConflictError(BUYER_LINK_INVALID_MESSAGE);
       if (result.kind === "violations") return { ok: false as const, violations: result.violations };
       return { ok: true as const, order: result.order };
     },

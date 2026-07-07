@@ -1,0 +1,45 @@
+---
+import { OrderForm } from "@/components/portal/OrderForm";
+import PortalLayout from "@/layouts/PortalLayout.astro";
+import { resolveSupplierBuyerLink } from "@/server/portal/buyer-links";
+import { loadPortalPage } from "@/server/portal/page";
+
+export const prerender = false;
+
+const data = await loadPortalPage(Astro.request, Astro.url);
+if (!data) return new Response("Portal not found", { status: 404 });
+
+const { config, basePath, slug } = data;
+const token = Astro.params.token ?? "";
+const resolved = await resolveSupplierBuyerLink(slug, token);
+
+const title = `Order — ${config.business.name}`;
+const description = `Place an order with ${config.business.name}.`;
+
+const attribution =
+  resolved.kind === "valid"
+    ? {
+        token: resolved.link.token,
+        buyerName: resolved.link.buyerName,
+        contact: resolved.link.contact ?? null,
+      }
+    : null;
+---
+
+<PortalLayout config={config} basePath={basePath} title={title} description={description}>
+  {
+    attribution ? (
+      <OrderForm client:load config={config} slug={slug} attribution={attribution} />
+    ) : (
+      <section class="flex flex-col gap-4 py-16">
+        <h1 class="text-3xl font-bold" style={{ "font-family": "var(--portal-font-heading)" }}>
+          This link isn’t active
+        </h1>
+        <p class="max-w-xl text-[var(--portal-foreground)]/70">
+          This order link has been revoked or is no longer valid. Please ask{" "}
+          {config.business.name} for a fresh link to place your order.
+        </p>
+      </section>
+    )
+  }
+</PortalLayout>
