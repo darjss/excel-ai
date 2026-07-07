@@ -6,6 +6,11 @@ export const paletteKeySchema = v.picklist(PALETTE_KEYS);
 
 const sectionsUnique = (sections: Section[]): boolean => new Set(sections).size === sections.length;
 
+const CORE_SECTIONS: Section[] = ["hero", "catalog", "order-form"];
+
+const sectionsHaveCore = (sections: Section[]): boolean =>
+  CORE_SECTIONS.every((core) => sections.includes(core));
+
 export const stylePickSchema = v.strictObject({
   paletteKey: paletteKeySchema,
   radius,
@@ -15,6 +20,7 @@ export const stylePickSchema = v.strictObject({
     v.array(section),
     v.minLength(1),
     v.check(sectionsUnique, "Sections must not contain duplicate entries"),
+    v.check(sectionsHaveCore, 'Sections must include "hero", "catalog" and "order-form"'),
   ),
 });
 
