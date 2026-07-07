@@ -13,7 +13,7 @@ import type {
 import { extractConditionalFormats } from "./conditional-format";
 import { extractProtection } from "./protection";
 import { extractDataValidations } from "./validations";
-import { readWorkbookXml } from "./workbook-xml";
+import { assertInflatedSize, readWorkbookXml } from "./workbook-xml";
 
 const CELL_CAP = 4000;
 
@@ -190,6 +190,7 @@ const emptySheet = (name: string, index: number): SheetFacts => ({
 });
 
 export const parseWorkbook = (bytes: Uint8Array): WorkbookFacts => {
+  assertInflatedSize(bytes);
   const workbook = XLSX.read(bytes, { type: "array", cellFormula: true, cellNF: false });
   const { sheets: sheetXml, hasVba } = readWorkbookXml(bytes);
   const definedNames = parseDefinedNames(workbook);

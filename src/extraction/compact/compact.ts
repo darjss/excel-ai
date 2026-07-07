@@ -152,13 +152,22 @@ export const compactWorkbook = (facts: WorkbookFacts): CompactFacts => ({
   sheets: facts.sheets.map(compactSheet),
 });
 
-const renderSheet = (sheet: CompactSheet): string => {
+export const MAX_PROMPT_CHARS = 150_000;
+
+interface RenderOptions {
+  includeSamples: boolean;
+  includeValidations: boolean;
+}
+
+const renderSheet = (sheet: CompactSheet, options: RenderOptions): string => {
   const lines: string[] = [`## Sheet: ${sheet.name} (${sheet.dimension ?? "empty"})`];
   if (sheet.headers.some((cell) => cell.length > 0)) {
     lines.push(`Headers: ${sheet.headers.filter((cell) => cell.length > 0).join(" | ")}`);
   }
-  for (const row of sheet.sampleRows) {
-    if (row.some((cell) => cell.length > 0)) lines.push(`Row: ${row.join(" | ")}`);
+  if (options.includeSamples) {
+    for (const row of sheet.sampleRows) {
+      if (row.some((cell) => cell.length > 0)) lines.push(`Row: ${row.join(" | ")}`);
+    }
   }
   if (sheet.formulaGroups.length > 0) {
     lines.push(`Formulas (${sheet.formulaCount} total, ${sheet.formulaGroups.length} patterns):`);
@@ -166,10 +175,12 @@ const renderSheet = (sheet: CompactSheet): string => {
       lines.push(`  ${group.example} [${group.pattern}] ×${group.count} e.g. ${group.refs.slice(0, 4).join(",")}`);
     }
   }
-  for (const validation of sheet.validations) {
-    const values = validation.enumValues !== undefined ? ` = {${validation.enumValues.join(", ")}}` : "";
-    const source = validation.enumSource !== undefined ? ` [${validation.enumSource}]` : "";
-    lines.push(`Validation ${validation.type} @ ${validation.sqref}${values}${source}`);
+  if (options.includeValidations) {
+    for (const validation of sheet.validations) {
+      const values = validation.enumValues !== undefined ? ` = {${validation.enumValues.join(", ")}}` : "";
+      const source = validation.enumSource !== undefined ? ` [${validation.enumSource}]` : "";
+      lines.push(`Validation ${validation.type} @ ${validation.sqref}${values}${source}`);
+    }
   }
   if (sheet.mergeCount > 0) lines.push(`Merges: ${sheet.mergeCount} (${sheet.mergeSamples.join(", ")})`);
   for (const summary of sheet.conditionalSummaries) lines.push(`Conditional: ${summary}`);
@@ -177,15 +188,62 @@ const renderSheet = (sheet: CompactSheet): string => {
   return lines.join("\n");
 };
 
-export const renderPrompt = (compact: CompactFacts): string => {
+const renderAtLevel = (
+  compact: CompactFacts,
+  options: RenderOptions,
+  notice: string | null,
+): string => {
   const lines: string[] = [`# Workbook facts`, `Sheets: ${compact.sheetNames.join(", ")}`];
+  if (notice !== null) lines.push(notice);
   if (compact.hasVba) lines.push(`Contains VBA macros.`);
   const usableNames = compact.definedNames.filter((name) => !name.broken);
   if (usableNames.length > 0) {
     lines.push(`Named ranges: ${usableNames.map((name) => `${name.name}=${name.ref}`).join("; ")}`);
   }
-  for (const sheet of compact.sheets) lines.push("", renderSheet(sheet));
+  for (const sheet of compact.sheets) lines.push("", renderSheet(sheet, options));
   return lines.join("\n");
 };
+
+const noticeLine = (dropped: string): string =>
+  `⚠️ Truncated to fit the prompt budget — dropped ${dropped}. Formulas are preserved; use the tools to inspect anything missing.`;
+
+interface Level {
+  options: RenderOptions;
+  dropped: string | null;
+}
+
+const TRUNCATION_LEVELS: Level[] = [
+  { options: { includeSamples: true, includeValidations: true }, dropped: null },
+  { options: { includeSamples: false, includeValidations: true }, dropped: "sample rows" },
+  {
+    options: { includeSamples: false, includeValidations: false },
+    dropped: "sample rows and validations",
+  },
+];
+
+export interface RenderedPrompt {
+  text: string;
+  truncated: boolean;
+}
+
+export const renderPromptWithBudget = (
+  compact: CompactFacts,
+  cap = MAX_PROMPT_CHARS,
+): RenderedPrompt => {
+  for (const level of TRUNCATION_LEVELS) {
+    const notice = level.dropped === null ? null : noticeLine(level.dropped);
+    const text = renderAtLevel(compact, level.options, notice);
+    if (text.length <= cap) return { text, truncated: level.dropped !== null };
+  }
+  const last = TRUNCATION_LEVELS[TRUNCATION_LEVELS.length - 1];
+  const notice = noticeLine(last?.dropped ?? "sample rows and validations");
+  return {
+    text: renderAtLevel(compact, last?.options ?? { includeSamples: false, includeValidations: false }, notice),
+    truncated: true,
+  };
+};
+
+export const renderPrompt = (compact: CompactFacts): string =>
+  renderPromptWithBudget(compact).text;
 
 export const promptSize = (compact: CompactFacts): number => renderPrompt(compact).length;

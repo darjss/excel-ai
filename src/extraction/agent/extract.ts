@@ -42,6 +42,7 @@ export const runExtraction = async (
     userPrompt,
     tools: TOOL_SCHEMAS,
     execution,
+    maxCompletionTokens: 16384,
     onNarrate: (message) => emit(progress("reason", message)),
   });
 

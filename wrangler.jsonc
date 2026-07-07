@@ -49,5 +49,6 @@
     "POLAR_SERVER": "sandbox",
     "SSO_ENABLED": "false",
     "AI_GATEWAY_ID": "",
+    "EXTRACTION_RATE_LIMIT_PER_HOUR": "5",
   },
 }

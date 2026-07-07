@@ -1,6 +1,33 @@
 import { strFromU8, unzipSync } from "fflate";
 import { XMLParser } from "fast-xml-parser";
 
+const MAX_INFLATED_BYTES = 50 * 1024 * 1024;
+
+export class WorkbookTooLargeError extends Error {
+  readonly inflatedBytes: number;
+  readonly limitBytes: number;
+
+  constructor(inflatedBytes: number, limitBytes: number) {
+    super(
+      `Workbook inflates to more than ${Math.round(limitBytes / (1024 * 1024))}MB and was rejected.`,
+    );
+    this.name = "WorkbookTooLargeError";
+    this.inflatedBytes = inflatedBytes;
+    this.limitBytes = limitBytes;
+  }
+}
+
+export const assertInflatedSize = (bytes: Uint8Array, limit = MAX_INFLATED_BYTES): void => {
+  let total = 0;
+  unzipSync(bytes, {
+    filter: (file) => {
+      total += file.originalSize;
+      if (total > limit) throw new WorkbookTooLargeError(total, limit);
+      return false;
+    },
+  });
+};
+
 export interface SheetXmlEntry {
   name: string;
   path: string;

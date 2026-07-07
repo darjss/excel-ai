@@ -6,7 +6,7 @@ Models run on Workers AI (account billing, no external API keys), fronted by AI 
 
 Two structural consequences, both mandatory regardless of model:
 1. **The deterministic layer owns facts.** Formulas, data validations, conditional formatting, merged ranges, and protection flags come from the SheetJS parse and are never asked of an LLM — every judged failure across all models (including the frontier's) lived in this layer.
-2. **A deterministic formula verifier gates money math.** Every rule the model claims is recomputed against the parsed formula graph before entering PortalConfig.
+2. **A deterministic, evidence-based verifier gates money math.** Every money rule the model claims is checked by a per-formula scan of the parsed source range before entering PortalConfig: existence of a supporting formula or value must be proven from the parse (never from the model's echoed formula string), and any rule that cannot be backed — or that contradicts the parsed evidence — is downgraded to low confidence with a generated supplier question that always surfaces as a finding.
 
 Workers AI loop gotchas (from the bench): the binding already returns OpenAI-shaped responses with tool_calls; use `max_completion_tokens` (not `max_tokens`); budget generously because reasoning content consumes the completion budget (starvation returns empty content with finish_reason "length"); never call through `wrangler dev` in production paths — it crashes silently and hangs clients.
 

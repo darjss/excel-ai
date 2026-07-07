@@ -1,13 +1,9 @@
-import type { Finding, PortalConfig, Rule, TaxRule } from "@/portal-config";
+import type { Finding, PortalConfig, Rule } from "@/portal-config";
 import type { WorkbookFacts } from "../types";
-import { percentLiterals, stripEquals } from "./formula";
+import { type RuleDowngrade, verifyMoneyRule } from "./recompute";
 import { type FormulaAnomaly, detectAnomalies } from "./verifier";
 
-export interface RuleDowngrade {
-  ruleId: string;
-  reason: string;
-  question: string;
-}
+export type { RuleDowngrade } from "./recompute";
 
 export interface VerifyReport {
   anomalies: FormulaAnomaly[];
@@ -18,21 +14,6 @@ export interface VerifyResult {
   config: PortalConfig;
   report: VerifyReport;
 }
-
-const isTaxRule = (rule: Rule): rule is TaxRule => rule.type === "tax";
-
-const verifyTaxRule = (rule: TaxRule): RuleDowngrade | undefined => {
-  const formula = rule.source.formula;
-  if (formula === undefined) return undefined;
-  const rates = percentLiterals(formula);
-  if (rates.length === 0) return undefined;
-  if (rates.some((rate) => Math.abs(rate - rule.ratePercent) < 0.001)) return undefined;
-  return {
-    ruleId: rule.id,
-    reason: `Claimed tax rate ${rule.ratePercent}% does not match the ${rates.join(", ")}% in ${stripEquals(formula)}.`,
-    question: `The formula reads ${stripEquals(formula)} — is the tax rate ${rates[0]}% rather than ${rule.ratePercent}%?`,
-  };
-};
 
 const rangeContainsRef = (range: string, ref: string): boolean => {
   const normalized = ref.toUpperCase();
@@ -52,23 +33,46 @@ const downgradeFinding = (finding: Finding, question: string): Finding => ({
   question: finding.question ?? question,
 });
 
-export const verifyPortalConfig = (config: PortalConfig, facts: WorkbookFacts): VerifyResult => {
-  const anomalies = detectAnomalies(facts);
+const slug = (value: string): string => value.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase();
+
+const collectDowngrades = (config: PortalConfig, facts: WorkbookFacts, anomalies: FormulaAnomaly[]): RuleDowngrade[] => {
   const downgrades: RuleDowngrade[] = [];
+  const seen = new Set<string>();
+  const add = (downgrade: RuleDowngrade): void => {
+    if (seen.has(downgrade.ruleId)) return;
+    seen.add(downgrade.ruleId);
+    downgrades.push(downgrade);
+  };
 
   for (const rule of config.rules) {
-    if (isTaxRule(rule)) {
-      const taxDowngrade = verifyTaxRule(rule);
-      if (taxDowngrade !== undefined) downgrades.push(taxDowngrade);
+    const recomputed = verifyMoneyRule(rule, facts);
+    if (recomputed !== undefined) {
+      add(recomputed);
+      continue;
     }
     const anomaly = anomalyForRule(rule, anomalies);
     if (anomaly !== undefined) {
-      downgrades.push({ ruleId: rule.id, reason: anomaly.message, question: anomaly.question });
+      add({ ruleId: rule.id, reason: anomaly.message, question: anomaly.question });
     }
   }
+  return downgrades;
+};
+
+const ruleFindingIds = (findings: readonly Finding[]): Set<string> =>
+  new Set(
+    findings
+      .map((finding) => finding.targetRef)
+      .filter((ref): ref is { kind: "rule"; id: string } => ref?.kind === "rule")
+      .map((ref) => ref.id),
+  );
+
+export const verifyPortalConfig = (config: PortalConfig, facts: WorkbookFacts): VerifyResult => {
+  const anomalies = detectAnomalies(facts);
+  const downgrades = collectDowngrades(config, facts, anomalies);
 
   const downgradedIds = new Set(downgrades.map((downgrade) => downgrade.ruleId));
   const questionByRule = new Map(downgrades.map((downgrade) => [downgrade.ruleId, downgrade.question]));
+  const reasonByRule = new Map(downgrades.map((downgrade) => [downgrade.ruleId, downgrade.reason]));
 
   const findings: Finding[] = config.findings.map((finding) => {
     const ref = finding.targetRef;
@@ -78,17 +82,23 @@ export const verifyPortalConfig = (config: PortalConfig, facts: WorkbookFacts): 
     return finding;
   });
 
-  const coveredRefs = new Set(
-    config.findings
-      .map((finding) => finding.targetRef)
-      .filter((ref): ref is { kind: "rule"; id: string } => ref?.kind === "rule")
-      .map((ref) => ref.id),
-  );
+  const linkedRuleIds = ruleFindingIds(config.findings);
+  const syntheticRuleFindings: Finding[] = downgrades
+    .filter((downgrade) => !linkedRuleIds.has(downgrade.ruleId))
+    .map((downgrade) => ({
+      id: slug(`f-verify-rule-${downgrade.ruleId}`),
+      targetRef: { kind: "rule", id: downgrade.ruleId },
+      confidence: "low",
+      plainEnglish: reasonByRule.get(downgrade.ruleId) ?? downgrade.reason,
+      question: downgrade.question,
+      accepted: false,
+    }));
 
+  const coveredRefs = new Set([...linkedRuleIds, ...downgradedIds]);
   const anomalyFindings: Finding[] = anomalies
     .filter((anomaly) => !anomalyCoveredByRule(anomaly, config.rules, coveredRefs))
     .map((anomaly) => ({
-      id: `f-verify-${anomaly.sheet}-${anomaly.ref}`.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase(),
+      id: slug(`f-verify-${anomaly.sheet}-${anomaly.ref}`),
       confidence: "low",
       plainEnglish: anomaly.message,
       question: anomaly.question,
@@ -96,7 +106,7 @@ export const verifyPortalConfig = (config: PortalConfig, facts: WorkbookFacts): 
     }));
 
   return {
-    config: { ...config, findings: [...findings, ...anomalyFindings] },
+    config: { ...config, findings: [...findings, ...syntheticRuleFindings, ...anomalyFindings] },
     report: { anomalies, downgrades },
   };
 };
