@@ -1,57 +1,28 @@
-# Logs
-logs
-*.log*
+# build output
+dist/
+
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
- dist-ssr
- .tmp
-*.tsbuildinfo
-
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# wrangler files
-.wrangler
-.dev.vars*
-.prod.vars
+# environment variables
 .env
-.env.*
+.env.production
 
-runner/downloads
-/generated/prisma
+# macOS-specific files
+.DS_Store
 
-/generated/prisma
-test.ts
-temp/
+# jetbrains setting folder
+.idea/
 
-templates
-debugging.ipynb
-
-#bun.lock
-#*.lock
-
-debug-tools/*.json
-# Sentry Config File
-.env.sentry-build-plugin
-data-dump
-debug-tools/extracted
-debug-tools/presentation-tester
-
-.test-data
-cli
+.alchemy/
+.env
+.wrangler/

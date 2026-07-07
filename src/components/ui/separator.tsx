@@ -1,26 +1,24 @@
-import * as React from "react"
-import * as SeparatorPrimitive from "@radix-ui/react-separator"
+import type { PolymorphicProps } from "@kobalte/core/polymorphic";
+import { Separator as SeparatorPrimitive, type SeparatorRootProps } from "@kobalte/core/separator";
+import { type ComponentProps, mergeProps, splitProps, type ValidComponent } from "solid-js";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
+type SeparatorProps<T extends ValidComponent = "hr"> = PolymorphicProps<T, SeparatorRootProps<T>> &
+  Pick<ComponentProps<T>, "class">;
 
-function Separator({
-  className,
-  orientation = "horizontal",
-  decorative = true,
-  ...props
-}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+const Separator = <T extends ValidComponent = "hr">(props: SeparatorProps<T>) => {
+  const mergedProps = mergeProps({ orientation: "horizontal" } as const, props);
+  const [local, others] = splitProps(mergedProps as SeparatorProps, ["class"]);
   return (
-    <SeparatorPrimitive.Root
+    <SeparatorPrimitive
       data-slot="separator"
-      decorative={decorative}
-      orientation={orientation}
-      className={cn(
-        "bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
-        className
+      class={cn(
+        "shrink-0 bg-border data-[orientation=horizontal]:h-px data-[orientation=vertical]:h-full data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px",
+        local.class,
       )}
-      {...props}
+      {...others}
     />
-  )
-}
+  );
+};
 
-export { Separator }
+export { Separator, type SeparatorProps };

@@ -1,0 +1,27 @@
+---
+import AppFallback from "@/components/app/AppFallback.astro";
+import AppShell from "@/components/app/AppShell";
+import Layout from "@/layouts/Layout.astro";
+import { requireUser } from "@/lib/server/require-user";
+import { getBillingProductIds } from "@/server/lib/billing-config";
+
+// const requiredUser = requireUser(Astro);
+
+// if (requiredUser instanceof Response) {
+//   return requiredUser;
+// }
+
+const productIds = getBillingProductIds();
+---
+
+<Layout description="Protected Threadline app workspace." title="App | Threadline Starter">
+  <AppShell
+    client:only="solid-js"
+    initialPath={Astro.url.pathname}
+    productIds={productIds}
+    userEmail={"darjs"}
+    userName={`darjs`}
+  >
+    <AppFallback slot="fallback" />
+  </AppShell>
+</Layout>

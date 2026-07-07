@@ -1,64 +1,107 @@
-import * as React from "react"
-import * as TabsPrimitive from "@radix-ui/react-tabs"
+import type { PolymorphicProps } from "@kobalte/core";
+import {
+  Content,
+  List,
+  Root,
+  type TabsContentProps as TabsContentPrimitiveProps,
+  type TabsListProps as TabsListPrimitiveProps,
+  type TabsRootProps,
+  type TabsTriggerProps as TabsTriggerPrimitiveProps,
+  Trigger,
+} from "@kobalte/core/tabs";
+import { cva, type VariantProps } from "class-variance-authority";
+import { type ComponentProps, mergeProps, splitProps, type ValidComponent } from "solid-js";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
+type TabsProps<T extends ValidComponent = "div"> = PolymorphicProps<T, TabsRootProps<T>> &
+  Pick<ComponentProps<T>, "class" | "children">;
 
-function Tabs({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
+const Tabs = <T extends ValidComponent = "div">(props: TabsProps<T>) => {
+  const mergedProps = mergeProps({ orientation: "horizontal" }, props);
+  const [local, others] = splitProps(mergedProps, ["class", "orientation"]);
   return (
-    <TabsPrimitive.Root
+    <Root
       data-slot="tabs"
-      className={cn("flex flex-col gap-2", className)}
-      {...props}
+      data-orientation={local.orientation}
+      orientation={local.orientation}
+      class={cn("group/tabs z-tabs flex data-[orientation=horizontal]:flex-col", local.class)}
+      {...others}
     />
-  )
-}
+  );
+};
 
-function TabsList({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.List>) {
+const tabsListVariants = cva(
+  "group/tabs-list z-tabs-list inline-flex w-fit items-center justify-center text-muted-foreground group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col",
+  {
+    variants: {
+      variant: {
+        default: "z-tabs-list-variant-default bg-muted",
+        line: "z-tabs-list-variant-line gap-1 bg-transparent",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
+);
+
+type TabsListProps<T extends ValidComponent = "div"> = PolymorphicProps<
+  T,
+  TabsListPrimitiveProps<T>
+> &
+  VariantProps<typeof tabsListVariants> &
+  Pick<ComponentProps<T>, "class" | "children">;
+
+const TabsList = <T extends ValidComponent = "div">(props: TabsListProps<T>) => {
+  const [local, others] = splitProps(props as TabsListProps, ["variant", "class"]);
   return (
-    <TabsPrimitive.List
+    <List
+      class={cn(tabsListVariants({ variant: local.variant }), local.class)}
       data-slot="tabs-list"
-      className={cn(
-        "bg-bg-3 text-text-tertiary inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]",
-        className
-      )}
-      {...props}
+      data-variant={local.variant}
+      {...others}
     />
-  )
-}
+  );
+};
 
-function TabsTrigger({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+type TabTriggerProps<T extends ValidComponent = "button"> = PolymorphicProps<
+  T,
+  TabsTriggerPrimitiveProps<T>
+> &
+  Pick<ComponentProps<T>, "class" | "children">;
+
+const TabsTrigger = <T extends ValidComponent = "button">(props: TabTriggerProps<T>) => {
+  const [local, others] = splitProps(props as TabTriggerProps, ["class"]);
   return (
-    <TabsPrimitive.Trigger
+    <Trigger
       data-slot="tabs-trigger"
-      className={cn(
-        "data-[state=active]:bg-bg-3 dark:data-[state=active]:text-text-primary focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-bg-2 text-text-primary dark:text-text-tertiary inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
+      class={cn(
+        "relative z-tabs-trigger inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center whitespace-nowrap text-foreground/60 transition-all hover:text-foreground focus-visible:border-ring focus-visible:outline-1 focus-visible:outline-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start dark:text-muted-foreground dark:hover:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-selected:bg-transparent dark:group-data-[variant=line]/tabs-list:data-selected:border-transparent dark:group-data-[variant=line]/tabs-list:data-selected:bg-transparent",
+        "data-selected:bg-background data-selected:text-foreground dark:data-selected:border-input dark:data-selected:bg-input/30 dark:data-selected:text-foreground",
+        "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-selected:after:opacity-100",
+        local.class,
       )}
-      {...props}
+      {...others}
     />
-  )
-}
+  );
+};
 
-function TabsContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Content>) {
+type TabsContentProps<T extends ValidComponent = "div"> = PolymorphicProps<
+  T,
+  TabsContentPrimitiveProps<T>
+> &
+  Pick<ComponentProps<T>, "class" | "children">;
+
+const TabsContent = <T extends ValidComponent = "div">(props: TabsContentProps<T>) => {
+  const [local, others] = splitProps(props as TabsContentProps, ["class"]);
   return (
-    <TabsPrimitive.Content
+    <Content
       data-slot="tabs-content"
-      className={cn("flex-1 outline-none", className)}
-      {...props}
+      class={cn("z-tabs-content flex-1 outline-none", local.class)}
+      {...others}
     />
-  )
-}
+  );
+};
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };

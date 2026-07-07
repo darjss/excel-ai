@@ -1,0 +1,5 @@
+# Google Sheets first, drive.file scope, one-way Import
+
+v1 supports Google Sheets only, accessed exclusively through the non-sensitive `drive.file` OAuth scope (user picks the sheet via Google Picker or the app creates it), and data flows one way: Source Sheet → platform, on a poll plus manual "sync now". The only write to a Source Sheet is the append-only Orders Tab.
+
+Why: `drive.file` requires no Google OAuth verification, no CASA security assessment (~$500–4,500/yr avoided), and has no 100-user cap — the entire platform-setup pain disappears. Microsoft Graph was deferred because publisher verification is effectively mandatory, business tenants often route consent through IT admins, and the workbook API does not work on personal OneDrive. Two-way sync was rejected because no competitor does it reliably (data-loss complaints are their top churn driver after pricing), neither Google nor Microsoft offers cell-level change push, and append-only writes are the only conflict-free write. If write-back ever expands, rows must carry stable IDs — never row position. (2026-07 sync feasibility research.)
