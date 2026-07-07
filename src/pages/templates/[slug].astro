@@ -1,0 +1,89 @@
+---
+import Download from "lucide-solid/icons/download";
+import Footer from "@/components/marketing/Footer.astro";
+import MarketingHeader from "@/components/marketing/MarketingHeader.astro";
+import { PublishTemplateCta } from "@/components/marketing/PublishTemplateCta";
+import SheetPreview from "@/components/marketing/SheetPreview.astro";
+import Layout from "@/layouts/Layout.astro";
+import { env } from "@/env";
+import { faqJsonLd, productJsonLd, templateDownloadPath, templatePath } from "@/marketing/seo";
+import { templateBySlug } from "@/marketing/templates";
+
+const { slug } = Astro.params;
+const spec = slug === undefined ? undefined : templateBySlug(slug);
+
+if (spec === undefined) {
+  return new Response("Template not found", { status: 404 });
+}
+
+const canonical = new URL(templatePath(spec), env.APP_URL).toString();
+const jsonLd = [productJsonLd(spec, canonical), faqJsonLd(spec)];
+---
+
+<Layout
+  title={spec.seoTitle}
+  description={spec.metaDescription}
+  canonicalPath={templatePath(spec)}
+  jsonLd={jsonLd}
+>
+  <MarketingHeader />
+  <main class="mx-auto max-w-4xl px-6 py-16">
+    <nav class="text-muted-foreground text-sm">
+      <a href="/templates" class="hover:text-foreground">Templates</a>
+      <span class="mx-2">/</span>
+      <span>{spec.niche}</span>
+    </nav>
+
+    <header class="mt-6">
+      <h1 class="text-4xl font-bold tracking-tight">
+        Free {spec.niche.toLowerCase()} order form template
+      </h1>
+      <p class="text-muted-foreground mt-4 text-lg">{spec.intro}</p>
+      <div class="mt-6 flex flex-wrap items-center gap-4">
+        <a
+          href={templateDownloadPath(spec)}
+          class="bg-primary text-primary-foreground inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium"
+          download
+        >
+          <Download class="size-4" />
+          Download .xlsx
+        </a>
+        <span class="text-muted-foreground text-sm">
+          Works in Excel and Google Sheets. Free, no account.
+        </span>
+      </div>
+    </header>
+
+    <section class="mt-12">
+      <h2 class="text-xl font-semibold">What's in the sheet</h2>
+      <p class="text-muted-foreground mt-2 text-sm">
+        Prices and quantities are examples you replace with your own. Line totals, the subtotal{
+          spec.taxLabel ? ", and tax" : ""
+        } are live formulas.
+      </p>
+      <div class="mt-4">
+        <SheetPreview spec={spec} />
+      </div>
+      <p class="text-muted-foreground mt-3 text-sm">Terms: {spec.paymentTerms}</p>
+    </section>
+
+    <section class="mt-12">
+      <PublishTemplateCta client:load slug={spec.slug} niche={spec.niche} />
+    </section>
+
+    <section class="mt-16">
+      <h2 class="text-2xl font-bold tracking-tight">Questions</h2>
+      <dl class="mt-6 divide-y">
+        {
+          spec.faq.map((item) => (
+            <div class="py-5">
+              <dt class="font-medium">{item.question}</dt>
+              <dd class="text-muted-foreground mt-2 text-sm">{item.answer}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </section>
+  </main>
+  <Footer />
+</Layout>

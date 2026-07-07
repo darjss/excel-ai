@@ -1,17 +1,32 @@
 ---
+import CommissionComparison from "@/components/marketing/CommissionComparison.astro";
 import Features from "@/components/marketing/Features.astro";
 import Footer from "@/components/marketing/Footer.astro";
+import { Hero } from "@/components/marketing/Hero";
 import HowItWorks from "@/components/marketing/HowItWorks.astro";
 import PricingTeaser from "@/components/marketing/PricingTeaser.astro";
-import { Hero } from "@/components/marketing/Hero";
+import TemplatesTeaser from "@/components/marketing/TemplatesTeaser.astro";
 import Layout from "@/layouts/Layout.astro";
+
+const organization = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Sheetstand",
+  description: "Turn your spreadsheet into a hosted, customer-facing order portal.",
+};
 ---
 
-<Layout title="Sheetstand — your spreadsheet, a customer-facing order portal">
+<Layout
+  title="Sheetstand — your spreadsheet, a customer-facing order portal"
+  description="Turn your order spreadsheet into a hosted portal your buyers order from. Flat pricing, unlimited buyers and orders, no commission."
+  jsonLd={[organization]}
+>
   <main>
     <Hero client:load />
-    <Features />
     <HowItWorks />
+    <Features />
+    <TemplatesTeaser />
+    <CommissionComparison />
     <PricingTeaser />
   </main>
   <Footer />
